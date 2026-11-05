@@ -1,0 +1,48 @@
+{
+  "name": "restaurant-pos",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "overrides": {
+    "vite": "^6.4.0",
+    "tsup": {
+      "esbuild": "^0.28.2"
+    }
+  },
+  "config": {
+    "mongodbMemoryServer": {
+      "disablePostinstall": true,
+      "downloadDir": "node_modules/.cache/mongodb-memory-server",
+      "version": "7.0.24"
+    }
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c green,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w client",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "seed": "npm run seed -w server",
+    "setup": "node scripts/setup.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/supertest": "^6.0.3",
+    "concurrently": "^9.2.1",
+    "mongodb-memory-server": "^10.3.0",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

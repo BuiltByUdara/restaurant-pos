@@ -1,0 +1,40 @@
+name: gather-pos
+services:
+  mongo:
+    image: mongo:7.0
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all']
+    ports: ['127.0.0.1:27017:27017']
+    volumes: ['mongo-data:/data/db']
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mongosh --quiet --eval ''try { rs.status() } catch (e) { rs.initiate({_id:"rs0",members:[{_id:0,host:"mongo:27017"}]}); } if (!db.hello().isWritablePrimary) quit(1)''',
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped
+  server:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: development
+      MONGODB_URI: mongodb://mongo:27017/restaurant_pos?replicaSet=rs0
+      CLIENT_ORIGIN: http://localhost:8080
+    depends_on:
+      mongo: { condition: service_healthy }
+    restart: unless-stopped
+  web:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    ports: ['127.0.0.1:8080:80']
+    depends_on: [server]
+    restart: unless-stopped
+volumes:
+  mongo-data:

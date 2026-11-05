@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  :root {
+    --background: 42 25% 97%;
+    --foreground: 155 18% 16%;
+    --card: 0 0% 100%;
+    --border: 45 12% 88%;
+    --muted: 42 18% 94%;
+    --muted-foreground: 150 5% 43%;
+    --primary: 157 35% 26%;
+    --primary-foreground: 45 33% 96%;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+  .dark {
+    --background: 155 13% 10%;
+    --foreground: 42 20% 93%;
+    --card: 155 12% 13%;
+    --border: 155 9% 23%;
+    --muted: 155 10% 18%;
+    --muted-foreground: 150 7% 65%;
+    --primary: 147 28% 69%;
+    --primary-foreground: 155 25% 12%;
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply m-0 bg-background text-foreground;
+  }
+  button,
+  a,
+  input {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:focus-visible,
+  a:focus-visible {
+    @apply outline outline-2 outline-offset-4 outline-primary;
+  }
+  ::selection {
+    background: #d6dfcf;
+    color: #1e3b30;
+  }
+}
+.eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  color: hsl(var(--muted-foreground));
+}
+.login-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.login-story,
+.welcome-card {
+  background: #193e33;
+}
+.login-story {
+  background: radial-gradient(ellipse at 100% 100%, #38604b 0, transparent 65%), #193e33;
+}
+.story-circle {
+  position: absolute;
+  width: 590px;
+  height: 590px;
+  right: -330px;
+  bottom: -180px;
+  border: 1px solid #ffffff12;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 60px #ffffff03,
+    0 0 0 120px #ffffff03;
+}
+@media (max-width: 1023px) {
+  .login-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
