@@ -25,10 +25,18 @@ export function Workspace() {
             Welcome in, {user.name.split(' ')[0]}.
           </h2>
           <p className="max-w-md text-sm leading-7 text-white/75">
-            Your staff workspace is ready. Review your access, meet your team, and see what’s coming
-            next.
+            Your restaurant is taking shape. Organize your menu, arrange your tables, and keep your
+            team connected.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
+            {user.permissions.includes('menu:read') && (
+              <Button asChild className="bg-[#efe7d6] text-[#234238] hover:bg-white">
+                <Link to="/menu">
+                  Explore your menu
+                  <ArrowRight size={16} />
+                </Link>
+              </Button>
+            )}
             {user.permissions.includes('staff:read') && (
               <Button asChild className="bg-[#efe7d6] text-[#234238] hover:bg-white">
                 <Link to="/team">
@@ -74,13 +82,13 @@ export function Workspace() {
             </p>
           </div>
           <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-            Phase 1 of 8
+            Phase 2 of 8
           </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { icon: ShieldCheck, name: 'Staff & access', phase: 'Phase 01', done: true },
-            { icon: LayoutGrid, name: 'Menu & tables', phase: 'Phase 02' },
+            { icon: LayoutGrid, name: 'Menu & tables', phase: 'Phase 02', done: true },
             { icon: ReceiptText, name: 'Orders & checkout', phase: 'Phases 03–05' },
             { icon: Package, name: 'Stock & insights', phase: 'Phases 06–07' },
           ].map((item) => (
@@ -102,8 +110,8 @@ export function Workspace() {
       </section>
       <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
         <ChefHat size={16} className="shrink-0" />
-        This foundation release contains staff authentication and access management. Sales,
-        ordering, and kitchen modules will be implemented in the following phases.
+        Menu configuration and floor management are ready. Ordering, billing, and kitchen
+        fulfillment arrive in the following phases.
       </p>
     </div>
   );

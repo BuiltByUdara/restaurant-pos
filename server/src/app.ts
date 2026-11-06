@@ -6,6 +6,8 @@ import { pinoHttp } from 'pino-http';
 import { randomUUID } from 'node:crypto';
 import { rateLimit } from 'express-rate-limit';
 import mongoose from 'mongoose';
+import { EventEmitter } from 'node:events';
+import { configurationRoutes } from './modules/configuration/routes.js';
 import type { Config } from './config.js';
 import { createAuthService } from './modules/auth/service.js';
 import { authRoutes } from './modules/auth/routes.js';
@@ -15,6 +17,7 @@ import { errorHandler, AppError } from './lib/errors.js';
 export function createApp(config: Config) {
   const app = express(),
     auth = createAuthService(config);
+  const events = new EventEmitter();
   app.disable('x-powered-by');
   if (config.NODE_ENV === 'production') app.set('trust proxy', 1);
   app.use(
@@ -41,7 +44,7 @@ export function createApp(config: Config) {
     '/api',
     rateLimit({
       windowMs: 60_000,
-      limit: 180,
+      limit: config.API_RATE_LIMIT_PER_MINUTE,
       standardHeaders: 'draft-8',
       legacyHeaders: false,
       message: { error: { code: 'RATE_LIMIT', message: 'Too many requests. Try again shortly.' } },
@@ -53,15 +56,17 @@ export function createApp(config: Config) {
       data: {
         status: ready ? 'ok' : 'unavailable',
         database: ready ? 'connected' : 'disconnected',
-        phase: 1,
+        phase: 2,
       },
     });
   });
   app.use('/api/v1/auth', authRoutes(auth, config));
   app.use('/api/v1/staff', staffRoutes(auth));
+  app.use('/api/v1/catalog', configurationRoutes(auth, events, 'catalog'));
+  app.use('/api/v1/dining', configurationRoutes(auth, events, 'dining'));
   app.use((_req, _res) => {
     throw new AppError(404, 'NOT_FOUND', 'Endpoint not found.');
   });
   app.use(errorHandler);
-  return { app, auth };
+  return { app, auth, events };
 }

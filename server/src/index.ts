@@ -5,13 +5,15 @@ import { readConfig } from './config.js';
 import { connectDatabase } from './db.js';
 import { createApp } from './app.js';
 import { attachRealtime } from './realtime.js';
+import { initializeConfiguration } from './modules/configuration/models.js';
 const config = readConfig(),
   logger = pino({ level: config.LOG_LEVEL });
 try {
   await connectDatabase(config.MONGODB_URI);
-  const { app, auth } = createApp(config);
+  await initializeConfiguration();
+  const { app, auth, events } = createApp(config);
   const http = createServer(app);
-  const io = attachRealtime(http, auth, config);
+  const io = attachRealtime(http, auth, config, events);
   http.listen(config.PORT, () => logger.info({ port: config.PORT }, 'POS API ready'));
   let stopping = false;
   const shutdown = () => {

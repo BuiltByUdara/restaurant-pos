@@ -8,6 +8,9 @@ import { Layout } from './components/layout';
 import { Workspace } from './features/workspace/home';
 import { Team } from './features/staff/team';
 import { Access } from './features/auth/access';
+import { Catalog } from './features/configuration/catalog';
+import { Dining } from './features/configuration/dining';
+import type { Permission } from '@restaurant/shared';
 function Protected() {
   const user = useAuth((s) => s.user);
   return user ? <Outlet /> : <Navigate to="/login" replace />;
@@ -21,6 +24,28 @@ function StaffGuard() {
       <h2 className="text-xl font-semibold">Access restricted</h2>
       <p className="mt-3 text-muted-foreground">
         Your role does not include access to staff records.
+      </p>
+      <Link className="mt-5 inline-block underline" to="/">
+        Return to workspace
+      </Link>
+    </div>
+  );
+}
+function FeatureGuard({
+  permission,
+  children,
+}: {
+  permission: Permission;
+  children: React.ReactNode;
+}) {
+  const allowed = useAuth((s) => s.user?.permissions.includes(permission));
+  return allowed ? (
+    children
+  ) : (
+    <div role="alert" className="rounded-xl border border-border bg-card p-8">
+      <h2 className="text-xl font-semibold">Access restricted</h2>
+      <p className="mt-3 text-muted-foreground">
+        Your role does not include access to this feature.
       </p>
       <Link className="mt-5 inline-block underline" to="/">
         Return to workspace
@@ -62,6 +87,22 @@ export function App() {
             <Route index element={<Workspace />} />
             <Route path="team" element={<StaffGuard />} />
             <Route path="access" element={<Access />} />
+            <Route
+              path="menu"
+              element={
+                <FeatureGuard permission="menu:read">
+                  <Catalog />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="tables"
+              element={
+                <FeatureGuard permission="tables:read">
+                  <Dining />
+                </FeatureGuard>
+              }
+            />
             <Route
               path="*"
               element={

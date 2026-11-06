@@ -22,6 +22,8 @@ import {
   BarChart3,
   Settings,
   Menu,
+  BookOpen,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/dialog';
@@ -52,7 +54,15 @@ export function Layout() {
   useEffect(() => {
     if (!token) return;
     const socket = io({ auth: { token } });
-    socket.on('session:ready', () => setLive(true));
+    socket.on('session:ready', () => {
+      setLive(true);
+      void queryClient.invalidateQueries({ queryKey: ['configuration'] });
+    });
+    const refreshConfiguration = () => {
+      void queryClient.invalidateQueries({ queryKey: ['configuration'] });
+    };
+    socket.on('catalog:changed', refreshConfiguration);
+    socket.on('tables:changed', refreshConfiguration);
     socket.on('disconnect', () => setLive(false));
     socket.on('connect_error', () => setLive(false));
     return () => {
@@ -111,7 +121,11 @@ export function Layout() {
       ? 'Your team'
       : location.pathname === '/access'
         ? 'Access & security'
-        : 'Workspace overview';
+        : location.pathname === '/menu'
+          ? 'Menu collection'
+          : location.pathname === '/tables'
+            ? 'Floor plan'
+            : 'Workspace overview';
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only z-50 bg-card p-4 focus:not-sr-only focus:fixed">
@@ -151,6 +165,12 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-3">WORKSPACE</p>}
           {[
             { to: '/', label: 'Overview', icon: LayoutDashboard },
+            ...(user.permissions.includes('menu:read')
+              ? [{ to: '/menu', label: 'Menu collection', icon: BookOpen }]
+              : []),
+            ...(user.permissions.includes('tables:read')
+              ? [{ to: '/tables', label: 'Floor plan', icon: LayoutGrid }]
+              : []),
             ...(user.permissions.includes('staff:read')
               ? [{ to: '/team', label: 'Your team', icon: Users }]
               : []),
@@ -224,7 +244,7 @@ export function Layout() {
                 )}
               />
               {health.isSuccess ? 'Database connected' : 'Checking connection'}
-              <span className="ml-auto">v0.1</span>
+              <span className="ml-auto">v0.2</span>
             </div>
           )}
         </div>

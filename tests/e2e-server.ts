@@ -7,6 +7,7 @@ import { attachRealtime } from '../server/src/realtime';
 import { Role, User } from '../server/src/modules/auth/models';
 import { passwordHash } from '../server/src/modules/auth/service';
 import { rolePermissions } from '../shared/src';
+import { seedDemoCatalog } from '../server/src/modules/configuration/demo';
 const mongo = await MongoMemoryReplSet.create({
   replSet: { count: 1 },
   binary: { version: '7.0.24' },
@@ -24,14 +25,17 @@ for (const name of ['Owner', 'Cashier'] as const) {
 const config = {
   NODE_ENV: 'test' as const,
   PORT: 4100,
+  API_RATE_LIMIT_PER_MINUTE: 600,
   MONGODB_URI: mongo.getUri(),
   JWT_SECRET: 'ephemeral-e2e-secret-'.repeat(4),
   CLIENT_ORIGIN: 'http://localhost:5174',
   LOG_LEVEL: 'silent' as const,
 };
-const { app, auth } = createApp(config);
+const owner = await User.findOne({ email: 'owner@example.test' });
+await seedDemoCatalog(owner!.id);
+const { app, auth, events } = createApp(config);
 const http = createServer(app);
-const io = attachRealtime(http, auth, config);
+const io = attachRealtime(http, auth, config, events);
 http.listen(4100, '127.0.0.1');
 const stop = async () => {
   io.close();

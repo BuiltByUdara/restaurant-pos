@@ -1,0 +1,2410 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Gather POS - Phase 2",
+    "version": "0.2.0",
+    "description": "Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "refreshCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "pos_refresh"
+      }
+    },
+    "schemas": {
+      "Version": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["version"],
+        "additionalProperties": false
+      },
+      "TableStatus": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["AVAILABLE", "RESERVED", "OCCUPIED"]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["status", "version"],
+        "additionalProperties": false
+      },
+      "CategoryInput": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "sortOrder": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "CategoryUpdate": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "sortOrder": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["name", "version"],
+        "additionalProperties": false
+      },
+      "Category": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "sortOrder": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["name", "description", "sortOrder", "id", "version", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "ModifierGroupInput": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minSelections": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "maxSelections": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "options": {
+            "minItems": 1,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "priceMinor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000000
+                }
+              },
+              "required": ["id", "name", "priceMinor"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["name", "minSelections", "maxSelections", "options"],
+        "additionalProperties": false
+      },
+      "ModifierGroupUpdate": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minSelections": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "maxSelections": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "options": {
+            "minItems": 1,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "priceMinor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000000
+                }
+              },
+              "required": ["id", "name", "priceMinor"],
+              "additionalProperties": false
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["name", "minSelections", "maxSelections", "options", "version"],
+        "additionalProperties": false
+      },
+      "ModifierGroup": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minSelections": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "maxSelections": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "options": {
+            "minItems": 1,
+            "maxItems": 30,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "priceMinor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000000
+                }
+              },
+              "required": ["id", "name", "priceMinor"],
+              "additionalProperties": false
+            }
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "minSelections",
+          "maxSelections",
+          "options",
+          "id",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "MenuItemInput": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "categoryId": {
+            "type": "string",
+            "pattern": "^[a-f\\d]{24}$"
+          },
+          "priceMinor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000
+          },
+          "imageUrl": {
+            "default": "",
+            "anyOf": [
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "type": "string",
+                "maxLength": 2048,
+                "format": "uri"
+              }
+            ]
+          },
+          "available": {
+            "default": true,
+            "type": "boolean"
+          },
+          "station": {
+            "default": "Kitchen",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "modifierGroupIds": {
+            "default": [],
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            }
+          }
+        },
+        "required": ["name", "categoryId", "priceMinor"],
+        "additionalProperties": false
+      },
+      "MenuItemUpdate": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "categoryId": {
+            "type": "string",
+            "pattern": "^[a-f\\d]{24}$"
+          },
+          "priceMinor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000
+          },
+          "imageUrl": {
+            "default": "",
+            "anyOf": [
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "type": "string",
+                "maxLength": 2048,
+                "format": "uri"
+              }
+            ]
+          },
+          "available": {
+            "default": true,
+            "type": "boolean"
+          },
+          "station": {
+            "default": "Kitchen",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "modifierGroupIds": {
+            "default": [],
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["name", "categoryId", "priceMinor", "version"],
+        "additionalProperties": false
+      },
+      "MenuItem": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "categoryId": {
+            "type": "string",
+            "pattern": "^[a-f\\d]{24}$"
+          },
+          "priceMinor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000
+          },
+          "imageUrl": {
+            "default": "",
+            "anyOf": [
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "type": "string",
+                "maxLength": 2048,
+                "format": "uri"
+              }
+            ]
+          },
+          "available": {
+            "default": true,
+            "type": "boolean"
+          },
+          "station": {
+            "default": "Kitchen",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "modifierGroupIds": {
+            "default": [],
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            }
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "categoryId",
+          "priceMinor",
+          "imageUrl",
+          "available",
+          "station",
+          "modifierGroupIds",
+          "id",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "FloorInput": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "sortOrder": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "FloorUpdate": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "sortOrder": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["name", "version"],
+        "additionalProperties": false
+      },
+      "Floor": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "sortOrder": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["name", "description", "sortOrder", "id", "version", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "TableInput": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "floorId": {
+            "type": "string",
+            "pattern": "^[a-f\\d]{24}$"
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "shape": {
+            "default": "square",
+            "type": "string",
+            "enum": ["square", "round"]
+          }
+        },
+        "required": ["name", "floorId", "capacity", "x", "y"],
+        "additionalProperties": false
+      },
+      "TableUpdate": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "floorId": {
+            "type": "string",
+            "pattern": "^[a-f\\d]{24}$"
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "shape": {
+            "default": "square",
+            "type": "string",
+            "enum": ["square", "round"]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["name", "floorId", "capacity", "x", "y", "version"],
+        "additionalProperties": false
+      },
+      "Table": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "floorId": {
+            "type": "string",
+            "pattern": "^[a-f\\d]{24}$"
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "shape": {
+            "default": "square",
+            "type": "string",
+            "enum": ["square", "round"]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "enum": ["AVAILABLE", "RESERVED", "OCCUPIED"]
+          }
+        },
+        "required": [
+          "name",
+          "floorId",
+          "capacity",
+          "x",
+          "y",
+          "shape",
+          "id",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "paths": {
+    "/catalog/categories": {
+      "get": {
+        "summary": "List Category records",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "enum": ["name", "newest"],
+              "default": "name"
+            }
+          }
+        ],
+        "description": "Requires menu:read. Active records only. Modifier choices must be unique and minSelections <= maxSelections <= options.length.",
+        "responses": {
+          "200": {
+            "description": "Paginated active records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Category"
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Category",
+        "description": "Requires menu:write. Audit entry commits atomically.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Category"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/catalog/categories/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get Category",
+        "description": "Requires menu:read.",
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Category"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace editable Category fields",
+        "description": "Requires menu:write and current version.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Category"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Archive Category",
+        "description": "Requires menu:write and current version. Active references and busy tables block archiving.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Version"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Category"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/catalog/modifier-groups": {
+      "get": {
+        "summary": "List ModifierGroup records",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "enum": ["name", "newest"],
+              "default": "name"
+            }
+          }
+        ],
+        "description": "Requires menu:read. Active records only. Modifier choices must be unique and minSelections <= maxSelections <= options.length.",
+        "responses": {
+          "200": {
+            "description": "Paginated active records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ModifierGroup"
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create ModifierGroup",
+        "description": "Requires menu:write. Audit entry commits atomically.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifierGroupInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ModifierGroup"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/catalog/modifier-groups/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get ModifierGroup",
+        "description": "Requires menu:read.",
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ModifierGroup"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace editable ModifierGroup fields",
+        "description": "Requires menu:write and current version.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifierGroupUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ModifierGroup"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Archive ModifierGroup",
+        "description": "Requires menu:write and current version. Active references and busy tables block archiving.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Version"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ModifierGroup"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/catalog/menu-items": {
+      "get": {
+        "summary": "List MenuItem records",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "enum": ["name", "newest"],
+              "default": "name"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "available",
+            "in": "query",
+            "schema": {
+              "enum": ["true", "false"]
+            }
+          }
+        ],
+        "description": "Requires menu:read. Active records only. Modifier choices must be unique and minSelections <= maxSelections <= options.length.",
+        "responses": {
+          "200": {
+            "description": "Paginated active records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/MenuItem"
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create MenuItem",
+        "description": "Requires menu:write. Audit entry commits atomically.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MenuItemInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MenuItem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/catalog/menu-items/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get MenuItem",
+        "description": "Requires menu:read.",
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MenuItem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace editable MenuItem fields",
+        "description": "Requires menu:write and current version.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MenuItemUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MenuItem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Archive MenuItem",
+        "description": "Requires menu:write and current version. Active references and busy tables block archiving.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Version"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MenuItem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/dining/floors": {
+      "get": {
+        "summary": "List Floor records",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "enum": ["name", "newest"],
+              "default": "name"
+            }
+          }
+        ],
+        "description": "Requires tables:read. Active records only. Modifier choices must be unique and minSelections <= maxSelections <= options.length.",
+        "responses": {
+          "200": {
+            "description": "Paginated active records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Floor"
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Floor",
+        "description": "Requires tables:write. Audit entry commits atomically.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FloorInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Floor"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/dining/floors/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get Floor",
+        "description": "Requires tables:read.",
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Floor"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace editable Floor fields",
+        "description": "Requires tables:write and current version.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FloorUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Floor"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Archive Floor",
+        "description": "Requires tables:write and current version. Active references and busy tables block archiving.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Version"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Floor"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/dining/tables": {
+      "get": {
+        "summary": "List Table records",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "enum": ["name", "newest"],
+              "default": "name"
+            }
+          },
+          {
+            "name": "floorId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Requires tables:read. Active records only. Modifier choices must be unique and minSelections <= maxSelections <= options.length.",
+        "responses": {
+          "200": {
+            "description": "Paginated active records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Table"
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Table",
+        "description": "Requires tables:write. Audit entry commits atomically.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TableInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Table"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/dining/tables/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get Table",
+        "description": "Requires tables:read.",
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Table"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace editable Table fields",
+        "description": "Requires tables:write and current version.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TableUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Table"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Archive Table",
+        "description": "Requires tables:write and current version. Active references and busy tables block archiving.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Version"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Table"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/dining/tables/{id}/status": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$"
+          }
+        }
+      ],
+      "patch": {
+        "summary": "Change table status",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TableStatus"
+              }
+            }
+          }
+        },
+        "description": "Requires tables:operate. AVAILABLE -> RESERVED or OCCUPIED; RESERVED -> AVAILABLE or OCCUPIED; OCCUPIED -> AVAILABLE. Requires current version.",
+        "responses": {
+          "200": {
+            "description": "Updated table",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Table"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Insufficient permission or rejected origin"
+          },
+          "404": {
+            "description": "Missing or archived record"
+          },
+          "409": {
+            "description": "Version conflict, name/position collision, busy table, unavailable reference or invalid transition"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Database readiness",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Ready; phase 2"
+          },
+          "503": {
+            "description": "Database disconnected"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Password login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "data: {user, accessToken, expiresIn}; HttpOnly refresh cookie set"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "429": {
+            "description": "Sign-in rate limit"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Rotate refresh token",
+        "security": [
+          {
+            "refreshCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New access token and rotating cookie"
+          },
+          "401": {
+            "description": "Invalid, expired or replayed session"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Revoke session",
+        "security": [
+          {
+            "refreshCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cookie cleared and session revoked"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Current staff identity and permissions",
+        "responses": {
+          "200": {
+            "description": "Staff identity"
+          },
+          "401": {
+            "description": "Sign in required"
+          }
+        }
+      }
+    },
+    "/staff": {
+      "get": {
+        "summary": "Read staff directory",
+        "description": "Requires staff:read. Query: page >= 1, limit 1-100.",
+        "responses": {
+          "200": {
+            "description": "data: staff array; pagination: {page, limit, total}"
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Permission denied"
+          }
+        }
+      }
+    }
+  }
+}

@@ -8,6 +8,9 @@
     "build": "tsup",
     "start": "node dist/index.js",
     "seed": "tsx src/seed.ts",
+    "migrate:phase2": "tsx src/migrate-phase2.ts",
+    "seed:demo": "tsx src/seed-demo.ts",
+    "docs:api": "tsx src/openapi.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

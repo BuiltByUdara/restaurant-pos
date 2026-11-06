@@ -176,7 +176,7 @@ export function Login() {
           </p>
         </div>
         <p className="text-center text-[11px] text-muted-foreground">
-          GATHER WORKSPACE <span className="mx-2">·</span> PHASE 01 / FOUNDATION
+          GATHER WORKSPACE <span className="mx-2">·</span> MENU & FLOOR MANAGEMENT
         </p>
       </section>
     </div>

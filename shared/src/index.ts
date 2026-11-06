@@ -23,16 +23,29 @@ export const permissions = [
   'staff:write',
   'reports:read',
   'settings:write',
+  'menu:read',
+  'menu:write',
+  'tables:read',
+  'tables:write',
+  'tables:operate',
 ] as const;
 export type Permission = (typeof permissions)[number];
 export type RoleName = (typeof roleNames)[number];
 export const rolePermissions: Record<RoleName, readonly Permission[]> = {
   Owner: permissions,
   Manager: permissions.filter((p) => p !== 'settings:write'),
-  Cashier: ['dashboard:read', 'orders:read', 'orders:write', 'payments:write'],
-  Waiter: ['orders:read', 'orders:write'],
-  'Kitchen Staff': ['kitchen:read', 'kitchen:write'],
-  'Inventory Staff': ['inventory:read', 'inventory:write'],
+  Cashier: [
+    'dashboard:read',
+    'orders:read',
+    'orders:write',
+    'payments:write',
+    'menu:read',
+    'tables:read',
+    'tables:operate',
+  ],
+  Waiter: ['orders:read', 'orders:write', 'menu:read', 'tables:read', 'tables:operate'],
+  'Kitchen Staff': ['kitchen:read', 'kitchen:write', 'menu:read'],
+  'Inventory Staff': ['inventory:read', 'inventory:write', 'menu:read'],
 };
 export const loginSchema = z
   .object({
@@ -61,3 +74,4 @@ export interface AuthResult {
 export interface ApiError {
   error: { code: string; message: string; requestId?: string };
 }
+export * from './configuration.js';

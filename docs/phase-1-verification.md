@@ -2,17 +2,17 @@
 
 Implemented and verified the authentication and application-layout foundation. No Phase 2 business modules have been implemented.
 
-| Check | Result |
-| --- | --- |
-| Client, server, shared TypeScript | Passed |
-| Production client and server builds | Passed |
-| Vitest + Supertest against isolated MongoDB replica set | 14 tests passed |
-| Playwright Chromium journeys | 3 tests passed |
-| Focused final theme/layout browser regression | Passed |
-| npm dependency audit after updates | 0 reported vulnerabilities |
-| Docker Compose configuration validation | Passed |
-| Live development health endpoint | Database connected; Phase 1 |
-| Live development frontend | HTTP 200 |
+| Check                                                   | Result                      |
+| ------------------------------------------------------- | --------------------------- |
+| Client, server, shared TypeScript                       | Passed                      |
+| Production client and server builds                     | Passed                      |
+| Vitest + Supertest against isolated MongoDB replica set | 14 tests passed             |
+| Playwright Chromium journeys                            | 3 tests passed              |
+| Focused final theme/layout browser regression           | Passed                      |
+| npm dependency audit after updates                      | 0 reported vulnerabilities  |
+| Docker Compose configuration validation                 | Passed                      |
+| Live development health endpoint                        | Database connected; Phase 1 |
+| Live development frontend                               | HTTP 200                    |
 
 Backend tests cover credential validation, Argon2id hashing, permissions, session rotation/replay, concurrent refresh requests, logout, deactivation, expiry, current-role checks, origin restrictions, production cookie flags, rate limits, authenticated sockets, and idempotent seed behavior.
 

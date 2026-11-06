@@ -6,6 +6,7 @@ dotenv.config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), qui
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+  API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(60).max(6000).default(600),
   MONGODB_URI: z.string().min(1),
   JWT_SECRET: z.string().min(48),
   CLIENT_ORIGIN: z.string().url(),

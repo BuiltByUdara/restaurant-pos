@@ -17,6 +17,7 @@ let mongo: MongoMemoryReplSet;
 const config: Config = {
   NODE_ENV: 'test',
   PORT: 4000,
+  API_RATE_LIMIT_PER_MINUTE: 600,
   MONGODB_URI: '',
   JWT_SECRET: 'test-only-secret-'.repeat(5),
   CLIENT_ORIGIN: 'http://localhost:5173',
