@@ -6,11 +6,13 @@ import { connectDatabase } from './db.js';
 import { createApp } from './app.js';
 import { attachRealtime } from './realtime.js';
 import { initializeConfiguration } from './modules/configuration/models.js';
+import { OrderModel } from './modules/orders/model.js';
 const config = readConfig(),
   logger = pino({ level: config.LOG_LEVEL });
 try {
   await connectDatabase(config.MONGODB_URI);
   await initializeConfiguration();
+  await OrderModel.init();
   const { app, auth, events } = createApp(config);
   const http = createServer(app);
   const io = attachRealtime(http, auth, config, events);

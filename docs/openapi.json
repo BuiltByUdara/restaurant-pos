@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Gather POS - Phase 2",
-    "version": "0.2.0",
+    "title": "Gather POS - Phase 3",
+    "version": "0.3.0",
     "description": "Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions."
   },
   "servers": [
@@ -779,6 +779,65 @@
           "updatedAt",
           "status"
         ],
+        "additionalProperties": false
+      },
+      "OrderInput": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "lines": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "menuItemId": {
+                  "type": "string",
+                  "pattern": "^[a-f\\d]{24}$"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 99
+                },
+                "optionIds": {
+                  "maxItems": 48,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "notes": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "required": ["menuItemId", "quantity", "optionIds", "notes"],
+              "additionalProperties": false
+            }
+          },
+          "tableId": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f\\d]{24}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "customerName": {
+            "default": "",
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": ["lines", "tableId", "customerName"],
         "additionalProperties": false
       }
     }
@@ -2402,6 +2461,165 @@
           },
           "403": {
             "description": "Permission denied"
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "Paginated order history; orders:read",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data: {items, pagination}"
+          }
+        }
+      },
+      "post": {
+        "summary": "Save an open order; orders:write",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Persisted order with server price snapshots"
+          },
+          "409": {
+            "description": "Unavailable table or menu reference"
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "summary": "Read order detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted order"
+          },
+          "400": {
+            "description": "Invalid payload"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version or lifecycle conflict"
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit OPEN order; OrderInput plus version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted order"
+          },
+          "400": {
+            "description": "Invalid payload"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version or lifecycle conflict"
+          }
+        }
+      }
+    },
+    "/orders/{id}/status": {
+      "patch": {
+        "summary": "Transition order; {version, status}; void requires orders:approve; completion requires payment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted order"
+          },
+          "400": {
+            "description": "Invalid payload"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version or lifecycle conflict"
+          }
+        }
+      }
+    },
+    "/orders/{id}/table": {
+      "patch": {
+        "summary": "Transfer seating; {version, tableId}",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted order"
+          },
+          "400": {
+            "description": "Invalid payload"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version or lifecycle conflict"
           }
         }
       }

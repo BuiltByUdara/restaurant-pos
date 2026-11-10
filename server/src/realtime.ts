@@ -57,6 +57,18 @@ export function attachRealtime(
     }
   };
   events?.on('configuration:changed', publish);
+  const publishOrders = () => {
+    for (const socket of io.sockets.sockets.values())
+      void auth
+        .authenticate(String(socket.handshake.auth.token))
+        .then((identity) => {
+          if (identity.user.permissions.includes('orders:read')) socket.emit('orders:changed');
+          if (identity.user.permissions.includes('tables:read')) socket.emit('tables:changed');
+        })
+        .catch(() => socket.disconnect(true));
+  };
+  events?.on('orders:changed', publishOrders);
+  http.once('close', () => events?.off('orders:changed', publishOrders));
   http.once('close', () => events?.off('configuration:changed', publish));
   return io;
 }

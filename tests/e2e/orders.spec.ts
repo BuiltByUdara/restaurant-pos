@@ -1,0 +1,21 @@
+import { test, expect } from '@playwright/test';
+test('POS saves, reloads, edits and submits a persistent order', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email address').fill('owner@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('Test-password-only-123!');
+  await page.getByRole('button', { name: 'Sign in to workspace' }).click();
+  await page.getByRole('link', { name: 'Point of sale', exact: true }).click();
+  await page.getByRole('button', { name: /Crispy fries/ }).click();
+  await page.getByLabel('Quantity').fill('2');
+  await page.getByLabel('Preparation notes').fill('No salt');
+  await page.getByRole('button', { name: 'Save order', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Order details/ })).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', { name: 'Edit order', exact: true }).first().click();
+  await page.getByLabel('Quantity').fill('3');
+  await page.getByRole('button', { name: 'Save order', exact: true }).click();
+  await expect(page.getByText(/3 × Crispy fries/)).toBeVisible();
+  await page.getByRole('button', { name: 'Submit order', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'PREPARING', exact: true }).first()).toBeVisible();
+  await page.screenshot({ path: 'test-results/phase3-pos.png', fullPage: true });
+});

@@ -1,4 +1,5 @@
 import express from 'express';
+import { orderRoutes } from './modules/orders/routes.js';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -56,12 +57,13 @@ export function createApp(config: Config) {
       data: {
         status: ready ? 'ok' : 'unavailable',
         database: ready ? 'connected' : 'disconnected',
-        phase: 2,
+        phase: 3,
       },
     });
   });
   app.use('/api/v1/auth', authRoutes(auth, config));
   app.use('/api/v1/staff', staffRoutes(auth));
+  app.use('/api/v1/orders', orderRoutes(auth, events));
   app.use('/api/v1/catalog', configurationRoutes(auth, events, 'catalog'));
   app.use('/api/v1/dining', configurationRoutes(auth, events, 'dining'));
   app.use((_req, _res) => {

@@ -55,6 +55,7 @@ export function Layout() {
     if (!token) return;
     const socket = io({ auth: { token } });
     socket.on('session:ready', () => {
+      void queryClient.invalidateQueries({ queryKey: ['orders'] });
       setLive(true);
       void queryClient.invalidateQueries({ queryKey: ['configuration'] });
     });
@@ -63,6 +64,9 @@ export function Layout() {
     };
     socket.on('catalog:changed', refreshConfiguration);
     socket.on('tables:changed', refreshConfiguration);
+    socket.on('orders:changed', () => {
+      void queryClient.invalidateQueries({ queryKey: ['orders'] });
+    });
     socket.on('disconnect', () => setLive(false));
     socket.on('connect_error', () => setLive(false));
     return () => {
@@ -125,7 +129,9 @@ export function Layout() {
           ? 'Menu collection'
           : location.pathname === '/tables'
             ? 'Floor plan'
-            : 'Workspace overview';
+            : location.pathname === '/pos'
+              ? 'Point of sale'
+              : 'Workspace overview';
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only z-50 bg-card p-4 focus:not-sr-only focus:fixed">
@@ -165,6 +171,9 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-3">WORKSPACE</p>}
           {[
             { to: '/', label: 'Overview', icon: LayoutDashboard },
+            ...(user.permissions.includes('orders:write')
+              ? [{ to: '/pos', label: 'Point of sale', icon: ShoppingBasket }]
+              : []),
             ...(user.permissions.includes('menu:read')
               ? [{ to: '/menu', label: 'Menu collection', icon: BookOpen }]
               : []),
@@ -197,7 +206,6 @@ export function Layout() {
           ))}
           {!collapsed && <p className="eyebrow px-3 pb-2 pt-7">COMING NEXT</p>}
           {[
-            { label: 'Point of sale', icon: ShoppingBasket },
             { label: 'Kitchen', icon: ChefHat },
             { label: 'Orders & bills', icon: ReceiptText },
             { label: 'Inventory', icon: Package },
@@ -244,7 +252,7 @@ export function Layout() {
                 )}
               />
               {health.isSuccess ? 'Database connected' : 'Checking connection'}
-              <span className="ml-auto">v0.2</span>
+              <span className="ml-auto">v0.3</span>
             </div>
           )}
         </div>

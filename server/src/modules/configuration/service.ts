@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { OrderModel } from '../orders/model.js';
 import type { ClientSession } from 'mongoose';
 import {
   categorySchema,
@@ -165,6 +166,14 @@ export async function changeRecord(
           await assertArchivable(kind, id!, current.status, session);
           fields = { archivedAt: new Date() };
         } else if (action === 'status') {
+          if (
+            kind === 'tables' &&
+            (await OrderModel.exists({
+              tableId: id,
+              status: { $nin: ['COMPLETED', 'CANCELLED', 'VOIDED'] },
+            }).session(session))
+          )
+            throw new AppError(409, 'TABLE_BUSY', 'Manage this table through its active order.');
           const allowed: Record<string, string[]> = {
             AVAILABLE: ['RESERVED', 'OCCUPIED'],
             RESERVED: ['AVAILABLE', 'OCCUPIED'],

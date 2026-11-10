@@ -1,5 +1,6 @@
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
+import { OrderModel } from '../server/src/modules/orders/model';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
@@ -51,6 +52,7 @@ beforeEach(async () => {
     User.deleteMany({}),
     Session.deleteMany({}),
     AuditLog.deleteMany({}),
+    OrderModel.deleteMany({}),
   ]);
   const hashed = await passwordHash('Test-configuration-123!');
   application = createApp(config);
@@ -90,6 +92,22 @@ async function category(name = 'Mains') {
     )
   ).body.data;
 }
+it('authorizes order APIs and persists versioned edits and details', async () => {
+  await request(application.app).get('/api/v1/orders').expect(401);
+  await call('get', 'orders', undefined, kitchenToken).expect(403);
+  const cat = await category();
+  const product = (await call('post', 'catalog/menu-items', itemFields(cat.id)).expect(201)).body.data;
+  const body = { lines: [{ menuItemId: product.id, quantity: 1, optionIds: [], notes: '' }] };
+  await call('post', 'orders', body, kitchenToken).expect(403);
+  const order = (await call('post', 'orders', body, waiterToken).expect(201)).body.data;
+  await call('get', `orders/${order._id}`, undefined, waiterToken).expect(200);
+  await call('put', `orders/${order._id}`, { ...body, version: 0 }, waiterToken).expect(200);
+  await call('put', `orders/${order._id}`, { ...body, version: 0 }, waiterToken).expect(409);
+  await call('patch', `orders/${order._id}/status`, { version: 1, status: 'SUBMITTED' }, waiterToken).expect(200);
+  await call('patch', `orders/${order._id}/status`, { version: 2, status: 'VOIDED' }, waiterToken).expect(409);
+  await call('patch', `orders/${order._id}/status`, { version: 2, status: 'VOIDED' }).expect(200);
+  expect((await call('get', 'orders?page=1').expect(200)).body.data.pagination.total).toBe(1);
+});
 async function floor(name = 'Main floor') {
   return (await call('post', 'dining/floors', { name, sortOrder: 0 }).expect(201)).body.data;
 }

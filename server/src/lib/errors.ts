@@ -26,13 +26,16 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
       .json({ error: { code: error.code, message: error.message, requestId: req.id } });
     return;
   }
-  if (error.status === 400 || error.status === 413) {
+  if (error?.status === 400 || error?.status === 413) {
     res
       .status(error.status)
       .json({ error: { code: 'INVALID_BODY', message: 'Invalid or oversized request body.' } });
     return;
   }
-  req.log.error({ err: error }, 'Request failed');
+  // pino-http uses res.err for its completion log. Without it the useful
+  // exception is replaced by a generic "failed with status code 500" stack.
+  res.err = error instanceof Error ? error : new Error('Unhandled server exception');
+  req.log.error({ err: res.err }, 'Request failed');
   res.status(500).json({
     error: {
       code: 'INTERNAL_ERROR',

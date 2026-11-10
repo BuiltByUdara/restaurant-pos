@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { z } from 'zod';
+import { inputSchema as orderInput } from './modules/orders/service.js';
 import {
   categorySchema,
   modifierGroupSchema,
@@ -244,11 +245,62 @@ paths['/staff'] = {
     },
   },
 };
+schemas.OrderInput = z.toJSONSchema(orderInput);
+paths['/orders'] = {
+  get: {
+    summary: 'Paginated order history; orders:read',
+    parameters: [{ name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } }],
+    responses: { '200': response('data: {items, pagination}') },
+  },
+  post: {
+    summary: 'Save an open order; orders:write',
+    requestBody: {
+      required: true,
+      content: { 'application/json': { schema: { $ref: '#/components/schemas/OrderInput' } } },
+    },
+    responses: {
+      '201': response('Persisted order with server price snapshots'),
+      '409': response('Unavailable table or menu reference'),
+    },
+  },
+};
+for (const [suffix, method, summary] of [
+  ['', 'get', 'Read order detail'],
+  ['', 'put', 'Edit OPEN order; OrderInput plus version'],
+  [
+    '/status',
+    'patch',
+    'Transition order; {version, status}; void requires orders:approve; completion requires payment',
+  ],
+  ['/table', 'patch', 'Transfer seating; {version, tableId}'],
+] as const) {
+  const key = '/orders/{id}' + suffix;
+  paths[key] = {
+    ...(paths[key] || {}),
+    [method]: {
+      summary,
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' },
+        },
+      ],
+      responses: {
+        '200': response('Persisted order'),
+        '400': response('Invalid payload'),
+        '403': response('Permission denied'),
+        '409': response('Version or lifecycle conflict'),
+      },
+    },
+  };
+}
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Gather POS - Phase 2',
-    version: '0.2.0',
+    title: 'Gather POS - Phase 3',
+    version: '0.3.0',
     description:
       'Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions.',
   },

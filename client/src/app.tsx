@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Pos } from './features/orders/pos';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, Link } from 'react-router-dom';
 import { LoaderCircle } from 'lucide-react';
 import { useAuth } from './features/auth/store';
@@ -85,6 +86,14 @@ export function App() {
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route index element={<Workspace />} />
+            <Route
+              path="pos"
+              element={
+                <FeatureGuard permission="orders:write">
+                  <Pos />
+                </FeatureGuard>
+              }
+            />
             <Route path="team" element={<StaffGuard />} />
             <Route path="access" element={<Access />} />
             <Route
