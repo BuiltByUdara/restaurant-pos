@@ -1,6 +1,6 @@
 # Gather · Single-restaurant POS
 
-Phases 1–3 of the supplied implementation plan: a working MERN monorepo with staff authentication, role permissions, menu/catalog management, and synchronized floor plans. Later POS modules are explicitly marked as planned. POS ordering is available; payments and inventory remain later phases. See [Phase 3 guide](docs/phase-3.md).
+Phases 1–4 of the supplied implementation plan: a working MERN monorepo with staff authentication, role permissions, menu/catalog management, and synchronized floor plans. Later POS modules are explicitly marked as planned. POS ordering is available; payments and inventory remain later phases. See [Phase 3 guide](docs/phase-3.md).
 
 **Upgrading Phase 1:** run `npm run migrate:phase2` with MongoDB running, then sign out and back in. See [Phase 2 guide](docs/phase-2.md) for permissions, workflows and integrity rules. Optional realistic menu data is available through `npm run seed:demo`; the migration itself does not insert business data.
 
@@ -132,4 +132,4 @@ Back up the replica set with `mongodump --archive=/backup/restaurant.archive --g
 
 Phases 1–2 include authentication, roles, menu configuration, and manual floor/table management, not staff account administration. The main seed creates six roles and one owner account. Optional demo seeding adds menu/floor data, never sales. Trusted-terminal PIN login remains optional and unimplemented. PIN hash storage exists, but no PIN login endpoint is advertised.
 
-Phase 3 is implemented: POS cart, server-side order calculations, order lifecycle and table/order assignment. Next: Phase 4 — kitchen display and durable kitchen tickets. Later phases implement kitchen fulfillment, transactional payment/refund ledgers, printer queues, inventory, shifts, business-timezone reporting, and operational hardening. Do not use this foundation release to take live restaurant payments.
+Phase 3 is implemented: POS cart, server-side order calculations, order lifecycle and table/order assignment. Phase 4 kitchen display and durable tickets are available; see [Phase 4 guide](docs/phase-4.md). Next: Phase 5 — payments, receipts, refunds and shifts. Later phases implement kitchen fulfillment, transactional payment/refund ledgers, printer queues, inventory, shifts, business-timezone reporting, and operational hardening. Do not use this foundation release to take live restaurant payments.

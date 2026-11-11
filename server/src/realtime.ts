@@ -63,6 +63,7 @@ export function attachRealtime(
         .authenticate(String(socket.handshake.auth.token))
         .then((identity) => {
           if (identity.user.permissions.includes('orders:read')) socket.emit('orders:changed');
+          if (identity.user.permissions.includes('kitchen:read')) socket.emit('kitchen:changed');
           if (identity.user.permissions.includes('tables:read')) socket.emit('tables:changed');
         })
         .catch(() => socket.disconnect(true));

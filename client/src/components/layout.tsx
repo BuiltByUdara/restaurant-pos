@@ -55,6 +55,7 @@ export function Layout() {
     if (!token) return;
     const socket = io({ auth: { token } });
     socket.on('session:ready', () => {
+      void queryClient.invalidateQueries({ queryKey: ['kitchen'] });
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
       setLive(true);
       void queryClient.invalidateQueries({ queryKey: ['configuration'] });
@@ -64,6 +65,9 @@ export function Layout() {
     };
     socket.on('catalog:changed', refreshConfiguration);
     socket.on('tables:changed', refreshConfiguration);
+    socket.on('kitchen:changed', () => {
+      void queryClient.invalidateQueries({ queryKey: ['kitchen'] });
+    });
     socket.on('orders:changed', () => {
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
     });
@@ -131,7 +135,9 @@ export function Layout() {
             ? 'Floor plan'
             : location.pathname === '/pos'
               ? 'Point of sale'
-              : 'Workspace overview';
+              : location.pathname === '/kitchen'
+                ? 'Kitchen display'
+                : 'Workspace overview';
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only z-50 bg-card p-4 focus:not-sr-only focus:fixed">
@@ -171,6 +177,9 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-3">WORKSPACE</p>}
           {[
             { to: '/', label: 'Overview', icon: LayoutDashboard },
+            ...(user.permissions.includes('kitchen:read')
+              ? [{ to: '/kitchen', label: 'Kitchen', icon: ChefHat }]
+              : []),
             ...(user.permissions.includes('orders:write')
               ? [{ to: '/pos', label: 'Point of sale', icon: ShoppingBasket }]
               : []),
@@ -206,7 +215,6 @@ export function Layout() {
           ))}
           {!collapsed && <p className="eyebrow px-3 pb-2 pt-7">COMING NEXT</p>}
           {[
-            { label: 'Kitchen', icon: ChefHat },
             { label: 'Orders & bills', icon: ReceiptText },
             { label: 'Inventory', icon: Package },
             { label: 'Reports', icon: BarChart3 },
@@ -252,7 +260,7 @@ export function Layout() {
                 )}
               />
               {health.isSuccess ? 'Database connected' : 'Checking connection'}
-              <span className="ml-auto">v0.3</span>
+              <span className="ml-auto">v0.4</span>
             </div>
           )}
         </div>

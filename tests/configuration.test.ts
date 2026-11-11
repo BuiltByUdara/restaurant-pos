@@ -1,5 +1,7 @@
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
+import { KitchenTicket } from '../server/src/modules/kitchen/model';
+import { recoverKitchenTickets } from '../server/src/modules/kitchen/migrate';
 import { OrderModel } from '../server/src/modules/orders/model';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import request from 'supertest';
@@ -39,6 +41,7 @@ beforeAll(async () => {
   mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.24' } });
   await mongoose.connect(mongo.getUri());
   await initializeConfiguration();
+  await KitchenTicket.init();
   await Promise.all([Role.init(), User.init(), Session.init(), AuditLog.init()]);
 });
 afterAll(async () => {
@@ -52,6 +55,7 @@ beforeEach(async () => {
     User.deleteMany({}),
     Session.deleteMany({}),
     AuditLog.deleteMany({}),
+    KitchenTicket.deleteMany({}),
     OrderModel.deleteMany({}),
   ]);
   const hashed = await passwordHash('Test-configuration-123!');
@@ -92,19 +96,92 @@ async function category(name = 'Mains') {
     )
   ).body.data;
 }
+it('persists kitchen tickets, enforces permissions and rejects stale preparation updates', async () => {
+  const cat = await category();
+  const product = (await call('post', 'catalog/menu-items', itemFields(cat.id)).expect(201)).body
+    .data;
+  const order = (
+    await call('post', 'orders', {
+      lines: [{ menuItemId: product.id, quantity: 2, optionIds: [], notes: 'Allergy note' }],
+    }).expect(201)
+  ).body.data;
+  await call('get', 'kitchen', undefined, waiterToken).expect(403);
+  await call('patch', `orders/${order._id}/status`, { version: 0, status: 'SUBMITTED' }).expect(
+    200,
+  );
+  await call('patch', `orders/${order._id}/status`, { version: 0, status: 'SUBMITTED' }).expect(
+    409,
+  );
+  const list = (await call('get', 'kitchen?station=Kitchen', undefined, kitchenToken).expect(200))
+    .body.data;
+  expect(list.items).toHaveLength(1);
+  expect(list.items[0].lines[0].notes).toBe('Allergy note');
+  expect(list.items[0].lines[0].unitPriceMinor).toBeUndefined();
+  await KitchenTicket.deleteOne({ _id: list.items[0]._id });
+  await recoverKitchenTickets();
+  await recoverKitchenTickets();
+  const recovered = await KitchenTicket.findOne({ orderId: order._id });
+  expect(await KitchenTicket.countDocuments({ orderId: order._id })).toBe(1);
+  const id = recovered!.id;
+  await call(
+    'patch',
+    `kitchen/${id}/status`,
+    { version: 0, status: 'PREPARING' },
+    waiterToken,
+  ).expect(403);
+  await call('patch', `kitchen/${id}/status`, { version: 0, status: 'READY' }, kitchenToken).expect(
+    409,
+  );
+  await call(
+    'patch',
+    `kitchen/${id}/status`,
+    { version: 0, status: 'PREPARING' },
+    kitchenToken,
+  ).expect(200);
+  await call('patch', `kitchen/${id}/status`, { version: 0, status: 'READY' }, kitchenToken).expect(
+    409,
+  );
+  await call('patch', `kitchen/${id}/status`, { version: 1, status: 'READY' }, kitchenToken).expect(
+    200,
+  );
+  const ready = (await call('get', `orders/${order._id}`).expect(200)).body.data;
+  expect(ready.status).toBe('READY');
+  await call('patch', `orders/${order._id}/status`, {
+    version: ready.version,
+    status: 'SERVED',
+  }).expect(200);
+  expect(
+    (await call('get', 'kitchen?history=true', undefined, kitchenToken).expect(200)).body.data
+      .items[0].status,
+  ).toBe('SERVED');
+  expect(
+    (await call('get', 'kitchen', undefined, kitchenToken).expect(200)).body.data.items,
+  ).toHaveLength(0);
+});
 it('authorizes order APIs and persists versioned edits and details', async () => {
   await request(application.app).get('/api/v1/orders').expect(401);
   await call('get', 'orders', undefined, kitchenToken).expect(403);
   const cat = await category();
-  const product = (await call('post', 'catalog/menu-items', itemFields(cat.id)).expect(201)).body.data;
+  const product = (await call('post', 'catalog/menu-items', itemFields(cat.id)).expect(201)).body
+    .data;
   const body = { lines: [{ menuItemId: product.id, quantity: 1, optionIds: [], notes: '' }] };
   await call('post', 'orders', body, kitchenToken).expect(403);
   const order = (await call('post', 'orders', body, waiterToken).expect(201)).body.data;
   await call('get', `orders/${order._id}`, undefined, waiterToken).expect(200);
   await call('put', `orders/${order._id}`, { ...body, version: 0 }, waiterToken).expect(200);
   await call('put', `orders/${order._id}`, { ...body, version: 0 }, waiterToken).expect(409);
-  await call('patch', `orders/${order._id}/status`, { version: 1, status: 'SUBMITTED' }, waiterToken).expect(200);
-  await call('patch', `orders/${order._id}/status`, { version: 2, status: 'VOIDED' }, waiterToken).expect(409);
+  await call(
+    'patch',
+    `orders/${order._id}/status`,
+    { version: 1, status: 'SUBMITTED' },
+    waiterToken,
+  ).expect(200);
+  await call(
+    'patch',
+    `orders/${order._id}/status`,
+    { version: 2, status: 'VOIDED' },
+    waiterToken,
+  ).expect(409);
   await call('patch', `orders/${order._id}/status`, { version: 2, status: 'VOIDED' }).expect(200);
   expect((await call('get', 'orders?page=1').expect(200)).body.data.pagination.total).toBe(1);
 });

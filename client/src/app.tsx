@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Kitchen } from './features/kitchen/display';
 import { Pos } from './features/orders/pos';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, Link } from 'react-router-dom';
 import { LoaderCircle } from 'lucide-react';
@@ -86,6 +87,14 @@ export function App() {
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route index element={<Workspace />} />
+            <Route
+              path="kitchen"
+              element={
+                <FeatureGuard permission="kitchen:read">
+                  <Kitchen />
+                </FeatureGuard>
+              }
+            />
             <Route
               path="pos"
               element={

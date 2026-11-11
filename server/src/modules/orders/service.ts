@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { KitchenTicket } from '../kitchen/model.js';
 import { z } from 'zod';
 import {
   calculateOrderTotals,
@@ -86,6 +87,7 @@ export async function createOrder(input: unknown, actor: string, id?: string, ve
       lines.push({
         menuItemId: String(item._id),
         name: item.name,
+        station: item.station || 'Kitchen',
         unitPriceMinor: item.priceMinor,
         quantity: line.quantity,
         modifiers,
@@ -109,9 +111,12 @@ export async function createOrder(input: unknown, actor: string, id?: string, ve
     if (existing) order.version += 1;
     order.history.push(entry);
     await order.save({ session });
-    await AuditLog.create([{ actor, action: existing ? 'order.edited' : 'order.created', entityId: String(order._id) }], {
-      session,
-    });
+    await AuditLog.create(
+      [{ actor, action: existing ? 'order.edited' : 'order.created', entityId: String(order._id) }],
+      {
+        session,
+      },
+    );
     return order;
   });
 }
@@ -148,6 +153,34 @@ export async function transitionOrder(
       throw new AppError(409, 'INVALID_TRANSITION', (error as Error).message);
     }
     order.status = fields.status;
+    if (fields.status === 'SUBMITTED') {
+      const table = order.tableId
+        ? await TableModel.findById(order.tableId).session(session)
+        : null;
+      await KitchenTicket.create(
+        [
+          {
+            orderId: order._id,
+            tableName: table?.name || 'Takeaway',
+            status: 'SUBMITTED',
+            lines: order.lines.map((line) => ({
+              name: line.name,
+              quantity: line.quantity,
+              notes: line.notes,
+              station: line.station || 'Kitchen',
+              modifiers: line.modifiers.map((m: { name: string }) => ({ name: m.name })),
+            })),
+          },
+        ],
+        { session },
+      );
+    } else if (['PREPARING', 'READY', 'SERVED', 'VOIDED'].includes(fields.status)) {
+      await KitchenTicket.updateOne(
+        { orderId: order._id },
+        { $set: { status: fields.status }, $inc: { version: 1 } },
+        { session },
+      );
+    }
     order.history.push({ status: fields.status, actor, at: new Date() });
     if (['CANCELLED', 'VOIDED'].includes(fields.status) && order.tableId)
       await TableModel.updateOne(
@@ -218,6 +251,14 @@ export async function transferOrder(id: string, input: unknown, actor: string) {
     order.tableId = fields.tableId ? new mongoose.Types.ObjectId(fields.tableId) : null;
     order.version += 1;
     order.history.push({ action: 'transferred', tableId: fields.tableId, actor, at: new Date() });
+    const table = fields.tableId
+      ? await TableModel.findById(fields.tableId).session(session)
+      : null;
+    await KitchenTicket.updateOne(
+      { orderId: order._id },
+      { $set: { tableName: table?.name || 'Takeaway' }, $inc: { version: 1 } },
+      { session },
+    );
     await order.save({ session });
     await AuditLog.create([{ actor, action: 'order.transferred', entityId: id }], { session });
     return order;

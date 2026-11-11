@@ -16,6 +16,7 @@ export const orderLineSnapshotSchema = z
   .object({
     menuItemId: z.string().regex(/^[a-f\d]{24}$/i),
     name: z.string().trim().min(1).max(120),
+    station: z.string().max(80).optional(),
     unitPriceMinor: money,
     quantity: z.number().int().min(1).max(99),
     modifiers: z

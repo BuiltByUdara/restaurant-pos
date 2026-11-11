@@ -82,7 +82,7 @@ export function Workspace() {
             </p>
           </div>
           <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-            Phase 3 of 8
+            Phase 4 of 8
           </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -110,7 +110,7 @@ export function Workspace() {
       </section>
       <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
         <ChefHat size={16} className="shrink-0" />
-        Menu, floor management and POS ordering are ready. Kitchen tickets and billing arrive in the
+        Menu, floor management and POS ordering are ready. Billing and payments arrive in the
         following phases.
       </p>
     </div>

@@ -296,11 +296,65 @@ for (const [suffix, method, summary] of [
     },
   };
 }
+paths['/kitchen'] = {
+  get: {
+    summary: 'Kitchen tickets; requires kitchen:read',
+    parameters: [
+      { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+      {
+        name: 'history',
+        in: 'query',
+        schema: { type: 'string', enum: ['true', 'false'], default: 'false' },
+      },
+      { name: 'station', in: 'query', schema: { type: 'string', maxLength: 80 } },
+    ],
+    responses: {
+      '200': response(
+        'data: {items, stations, pagination}; immutable kitchen line snapshots without prices',
+      ),
+      '403': response('Kitchen read permission required'),
+    },
+  },
+};
+paths['/kitchen/{id}/status'] = {
+  patch: {
+    summary: 'Advance whole kitchen ticket; requires kitchen:write',
+    parameters: [
+      {
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' },
+      },
+    ],
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['version', 'status'],
+            properties: {
+              version: { type: 'integer', minimum: 0 },
+              status: { type: 'string', enum: ['PREPARING', 'READY'] },
+            },
+          },
+        },
+      },
+    },
+    responses: {
+      '200': response('Persisted kitchen ticket; order updated atomically'),
+      '403': response('Kitchen write permission required'),
+      '409': response('Stale version or invalid transition'),
+    },
+  },
+};
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Gather POS - Phase 3',
-    version: '0.3.0',
+    title: 'Gather POS - Phase 4',
+    version: '0.4.0',
     description:
       'Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions.',
   },
