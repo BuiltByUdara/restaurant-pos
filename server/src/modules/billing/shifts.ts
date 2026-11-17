@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import { minorUnits, reconcileCash } from '@restaurant/shared';
-import { Shift, Payment } from './models.js';
+import { Shift, Payment, CashMovement } from './models.js';
 import { ConfigurationRevision } from '../configuration/models.js';
 import { AuditLog } from '../auth/models.js';
 import { AppError } from '../../lib/errors.js';
@@ -43,12 +43,15 @@ export async function closeShift(id: string, input: unknown, actor: string) {
     if (shift.status !== 'OPEN' || shift.version !== fields.version)
       throw new AppError(409, 'SHIFT_CHANGED', 'Reload the shift before closing it.');
     const payments = await Payment.find({ shiftId: shift._id, method: 'CASH' }).session(session);
+    const movements = await CashMovement.find({ shiftId: shift._id }).session(session);
+    const sum = (kind: string) =>
+      movements.filter((m) => m.kind === kind).reduce((s, m) => s + m.amountMinor, 0);
     const totals = reconcileCash({
       openingMinor: shift.openingMinor,
       paymentsMinor: payments.reduce((sum, payment) => sum + payment.amountMinor, 0),
-      refundsMinor: 0,
-      cashInMinor: 0,
-      cashOutMinor: 0,
+      refundsMinor: sum('REFUND'),
+      cashInMinor: sum('IN'),
+      cashOutMinor: sum('OUT'),
       countedMinor: fields.countedMinor,
     });
     shift.set({ ...totals, status: 'CLOSED', closedAt: new Date(), version: shift.version + 1 });

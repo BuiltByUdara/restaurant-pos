@@ -137,7 +137,9 @@ export function Layout() {
               ? 'Point of sale'
               : location.pathname === '/kitchen'
                 ? 'Kitchen display'
-                : 'Workspace overview';
+                : location.pathname === '/cashier'
+                  ? 'Cashier'
+                  : 'Workspace overview';
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only z-50 bg-card p-4 focus:not-sr-only focus:fixed">
@@ -177,7 +179,9 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-3">WORKSPACE</p>}
           {[
             { to: '/', label: 'Overview', icon: LayoutDashboard },
-              ...(user.permissions.includes('payments:write') ? [{ to: '/cashier', label: 'Cashier', icon: ReceiptText }] : []),
+            ...(user.permissions.includes('payments:write')
+              ? [{ to: '/cashier', label: 'Cashier', icon: ReceiptText }]
+              : []),
             ...(user.permissions.includes('kitchen:read')
               ? [{ to: '/kitchen', label: 'Kitchen', icon: ChefHat }]
               : []),
@@ -261,7 +265,7 @@ export function Layout() {
                 )}
               />
               {health.isSuccess ? 'Database connected' : 'Checking connection'}
-              <span className="ml-auto">v0.4</span>
+              <span className="ml-auto">v0.5</span>
             </div>
           )}
         </div>

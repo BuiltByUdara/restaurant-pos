@@ -350,11 +350,64 @@ paths['/kitchen/{id}/status'] = {
     },
   },
 };
+for (const [path, method, summary] of [
+  ['/billing/shifts', 'get', 'List own recent shifts'],
+  ['/billing/shifts', 'post', 'Open own shift; openingMinor'],
+  ['/billing/shifts/{id}/close', 'post', 'Close own shift; version and countedMinor'],
+  ['/billing/orders/{id}', 'get', 'Bill, payments, refunds and outstanding balance'],
+  [
+    '/billing/orders/{id}/bill',
+    'put',
+    'Manager adjustment; version, discountMinor, taxBasisPoints, serviceBasisPoints',
+  ],
+  ['/billing/payments', 'get', 'Payment ledger filtered by orderId'],
+  [
+    '/billing/payments/cash',
+    'post',
+    'Cash payment; orderId, version, amountMinor, tenderedMinor, idempotencyKey',
+  ],
+  [
+    '/billing/refunds',
+    'post',
+    'Manager refund; paymentId, kind REFUND, amountMinor, reason, idempotencyKey',
+  ],
+  ['/billing/movements', 'get', 'Own recent cash movements'],
+  ['/billing/movements', 'post', 'Cash movement; kind IN/OUT, amountMinor, reason, idempotencyKey'],
+  ['/billing/print-jobs', 'get', 'Own recent print jobs'],
+  ['/billing/print-jobs', 'post', 'Queue receipt; orderId and width 58/80'],
+  ['/billing/print-jobs/{id}', 'patch', 'Record DIALOG_OPENED or FAILED status'],
+] as const)
+  paths[path] = {
+    ...(paths[path] || {}),
+    [method]: {
+      summary,
+      description:
+        'Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.',
+      ...(path.includes('{id}')
+        ? {
+            parameters: [
+              {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' },
+              },
+            ],
+          }
+        : {}),
+      responses: {
+        '200': response('Persisted data'),
+        '400': response('Invalid input'),
+        '403': response('Permission denied'),
+        '409': response('Version, balance or idempotency conflict'),
+      },
+    },
+  };
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Gather POS - Phase 4',
-    version: '0.4.0',
+    title: 'Gather POS - Phase 5 cash workflows',
+    version: '0.5.0',
     description:
       'Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions.',
   },

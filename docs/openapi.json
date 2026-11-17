@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Gather POS - Phase 4",
-    "version": "0.4.0",
+    "title": "Gather POS - Phase 5 cash workflows",
+    "version": "0.5.0",
     "description": "Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions."
   },
   "servers": [
@@ -2710,6 +2710,304 @@
           },
           "409": {
             "description": "Stale version or invalid transition"
+          }
+        }
+      }
+    },
+    "/billing/shifts": {
+      "get": {
+        "summary": "List own recent shifts",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Open own shift; openingMinor",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/shifts/{id}/close": {
+      "post": {
+        "summary": "Close own shift; version and countedMinor",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/orders/{id}": {
+      "get": {
+        "summary": "Bill, payments, refunds and outstanding balance",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/orders/{id}/bill": {
+      "put": {
+        "summary": "Manager adjustment; version, discountMinor, taxBasisPoints, serviceBasisPoints",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/payments": {
+      "get": {
+        "summary": "Payment ledger filtered by orderId",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/payments/cash": {
+      "post": {
+        "summary": "Cash payment; orderId, version, amountMinor, tenderedMinor, idempotencyKey",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/refunds": {
+      "post": {
+        "summary": "Manager refund; paymentId, kind REFUND, amountMinor, reason, idempotencyKey",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/movements": {
+      "get": {
+        "summary": "Own recent cash movements",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Cash movement; kind IN/OUT, amountMinor, reason, idempotencyKey",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/print-jobs": {
+      "get": {
+        "summary": "Own recent print jobs",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      },
+      "post": {
+        "summary": "Queue receipt; orderId and width 58/80",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/billing/print-jobs/{id}": {
+      "patch": {
+        "summary": "Record DIALOG_OPENED or FAILED status",
+        "description": "Requires payments:write. Adjustment requires orders:approve; refund requires refunds:approve. Monetary inputs use integer minor units.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted data"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, balance or idempotency conflict"
           }
         }
       }

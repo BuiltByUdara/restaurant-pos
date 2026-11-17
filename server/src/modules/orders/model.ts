@@ -10,6 +10,7 @@ const schema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, required: true },
     lines: { type: [Schema.Types.Mixed], required: true },
     subtotalMinor: { type: Number, required: true },
+    bill: { type: Schema.Types.Mixed, default: null },
   },
   { timestamps: true, versionKey: false },
 );

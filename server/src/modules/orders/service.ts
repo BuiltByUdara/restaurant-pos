@@ -145,7 +145,15 @@ export async function transitionOrder(
     if (!order) throw new AppError(404, 'NOT_FOUND', 'Order not found.');
     if (order.version !== fields.version)
       throw new AppError(409, 'VERSION_CONFLICT', 'Order changed. Reload before continuing.');
-    if (fields.status === 'VOIDED' && await Payment.exists({ orderId: order._id }).session(session)) throw new AppError(409, 'PAYMENT_EXISTS', 'Paid orders require the refund workflow and cannot be voided.');
+    if (
+      fields.status === 'VOIDED' &&
+      (await Payment.exists({ orderId: order._id }).session(session))
+    )
+      throw new AppError(
+        409,
+        'PAYMENT_EXISTS',
+        'Paid orders require the refund workflow and cannot be voided.',
+      );
     try {
       assertOrderTransition(order.status as OrderState, fields.status, {
         managerApproved: approved,

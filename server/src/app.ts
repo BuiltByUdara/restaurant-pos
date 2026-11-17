@@ -59,7 +59,7 @@ export function createApp(config: Config) {
       data: {
         status: ready ? 'ok' : 'unavailable',
         database: ready ? 'connected' : 'disconnected',
-        phase: 4,
+        phase: 5,
       },
     });
   });

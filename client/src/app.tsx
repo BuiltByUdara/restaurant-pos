@@ -88,7 +88,14 @@ export function App() {
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route index element={<Workspace />} />
-            <Route path="cashier" element={<FeatureGuard permission="payments:write"><Cashier /></FeatureGuard>} />
+            <Route
+              path="cashier"
+              element={
+                <FeatureGuard permission="payments:write">
+                  <Cashier />
+                </FeatureGuard>
+              }
+            />
             <Route
               path="kitchen"
               element={

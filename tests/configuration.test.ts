@@ -1,5 +1,6 @@
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
+import { initializeBilling } from '../server/src/modules/billing/models';
 import { KitchenTicket } from '../server/src/modules/kitchen/model';
 import { recoverKitchenTickets } from '../server/src/modules/kitchen/migrate';
 import { OrderModel } from '../server/src/modules/orders/model';
@@ -41,6 +42,7 @@ beforeAll(async () => {
   mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 }, binary: { version: '7.0.24' } });
   await mongoose.connect(mongo.getUri());
   await initializeConfiguration();
+  await initializeBilling();
   await KitchenTicket.init();
   await Promise.all([Role.init(), User.init(), Session.init(), AuditLog.init()]);
 });
@@ -96,6 +98,20 @@ async function category(name = 'Mains') {
     )
   ).body.data;
 }
+it('requires payment permissions and separate manager approval for financial actions', async () => {
+  await request(application.app).get('/api/v1/billing/shifts').expect(401);
+  await call('get', 'billing/shifts', undefined, waiterToken).expect(403);
+  await Role.updateOne({ name: 'Waiter' }, { $addToSet: { permissions: 'payments:write' } });
+  await call('get', 'billing/shifts', undefined, waiterToken).expect(200);
+  await call('post', 'billing/refunds', {}, waiterToken).expect(403);
+  await call('put', 'billing/orders/000000000000000000000001/bill', {}, waiterToken).expect(403);
+  await call(
+    'post',
+    'billing/payments/cash',
+    { cardNumber: 'forbidden-field' },
+    waiterToken,
+  ).expect(400);
+});
 it('persists kitchen tickets, enforces permissions and rejects stale preparation updates', async () => {
   const cat = await category();
   const product = (await call('post', 'catalog/menu-items', itemFields(cat.id)).expect(201)).body
