@@ -76,3 +76,4 @@ export interface ApiError {
 }
 export * from './configuration.js';
 export * from './orders.js';
+export * from './billing.js';
