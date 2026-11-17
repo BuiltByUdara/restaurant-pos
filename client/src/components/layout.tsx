@@ -177,6 +177,7 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-3">WORKSPACE</p>}
           {[
             { to: '/', label: 'Overview', icon: LayoutDashboard },
+              ...(user.permissions.includes('payments:write') ? [{ to: '/cashier', label: 'Cashier', icon: ReceiptText }] : []),
             ...(user.permissions.includes('kitchen:read')
               ? [{ to: '/kitchen', label: 'Kitchen', icon: ChefHat }]
               : []),

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { Payment } from '../billing/models.js';
 import { KitchenTicket } from '../kitchen/model.js';
 import { z } from 'zod';
 import {
@@ -144,6 +145,7 @@ export async function transitionOrder(
     if (!order) throw new AppError(404, 'NOT_FOUND', 'Order not found.');
     if (order.version !== fields.version)
       throw new AppError(409, 'VERSION_CONFLICT', 'Order changed. Reload before continuing.');
+    if (fields.status === 'VOIDED' && await Payment.exists({ orderId: order._id }).session(session)) throw new AppError(409, 'PAYMENT_EXISTS', 'Paid orders require the refund workflow and cannot be voided.');
     try {
       assertOrderTransition(order.status as OrderState, fields.status, {
         managerApproved: approved,

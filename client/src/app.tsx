@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Cashier } from './features/billing/cashier';
 import { Kitchen } from './features/kitchen/display';
 import { Pos } from './features/orders/pos';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, Link } from 'react-router-dom';
@@ -87,6 +88,7 @@ export function App() {
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route index element={<Workspace />} />
+            <Route path="cashier" element={<FeatureGuard permission="payments:write"><Cashier /></FeatureGuard>} />
             <Route
               path="kitchen"
               element={

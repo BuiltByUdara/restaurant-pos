@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { initializeBilling } from './modules/billing/models.js';
 import mongoose from 'mongoose';
 import pino from 'pino';
 import { readConfig } from './config.js';
@@ -14,6 +15,7 @@ const config = readConfig(),
 try {
   await connectDatabase(config.MONGODB_URI);
   await initializeConfiguration();
+  await initializeBilling();
   await OrderModel.init();
   await KitchenTicket.init();
   await recoverKitchenTickets();

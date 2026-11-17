@@ -1,4 +1,5 @@
 import express from 'express';
+import { billingRoutes } from './modules/billing/routes.js';
 import { kitchenRoutes } from './modules/kitchen/routes.js';
 import { orderRoutes } from './modules/orders/routes.js';
 import helmet from 'helmet';
@@ -66,6 +67,7 @@ export function createApp(config: Config) {
   app.use('/api/v1/staff', staffRoutes(auth));
   app.use('/api/v1/orders', orderRoutes(auth, events));
   app.use('/api/v1/kitchen', kitchenRoutes(auth, events));
+  app.use('/api/v1/billing', billingRoutes(auth, events));
   app.use('/api/v1/catalog', configurationRoutes(auth, events, 'catalog'));
   app.use('/api/v1/dining', configurationRoutes(auth, events, 'dining'));
   app.use((_req, _res) => {
