@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Inventory } from './features/inventory/inventory';
 import { Cashier } from './features/billing/cashier';
 import { Kitchen } from './features/kitchen/display';
 import { Pos } from './features/orders/pos';
@@ -88,6 +89,14 @@ export function App() {
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route index element={<Workspace />} />
+            <Route
+              path="inventory"
+              element={
+                <FeatureGuard permission="inventory:read">
+                  <Inventory />
+                </FeatureGuard>
+              }
+            />
             <Route
               path="cashier"
               element={

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { consumeRecipes } from '../inventory/service.js';
 import { Payment } from '../billing/models.js';
 import { KitchenTicket } from '../kitchen/model.js';
 import { z } from 'zod';
@@ -164,6 +165,7 @@ export async function transitionOrder(
     }
     order.status = fields.status;
     if (fields.status === 'SUBMITTED') {
+      await consumeRecipes(order.id, order.lines, actor, session);
       const table = order.tableId
         ? await TableModel.findById(order.tableId).session(session)
         : null;

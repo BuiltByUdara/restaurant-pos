@@ -65,10 +65,24 @@ export function attachRealtime(
           if (identity.user.permissions.includes('orders:read')) socket.emit('orders:changed');
           if (identity.user.permissions.includes('kitchen:read')) socket.emit('kitchen:changed');
           if (identity.user.permissions.includes('tables:read')) socket.emit('tables:changed');
+          if (identity.user.permissions.includes('inventory:read'))
+            socket.emit('inventory:changed');
         })
         .catch(() => socket.disconnect(true));
   };
   events?.on('orders:changed', publishOrders);
+  const publishInventory = () => {
+    for (const socket of io.sockets.sockets.values())
+      void auth
+        .authenticate(String(socket.handshake.auth.token))
+        .then((identity) => {
+          if (identity.user.permissions.includes('inventory:read'))
+            socket.emit('inventory:changed');
+        })
+        .catch(() => socket.disconnect(true));
+  };
+  events?.on('inventory:changed', publishInventory);
+  http.once('close', () => events?.off('inventory:changed', publishInventory));
   http.once('close', () => events?.off('orders:changed', publishOrders));
   http.once('close', () => events?.off('configuration:changed', publish));
   return io;

@@ -55,6 +55,7 @@ export function Layout() {
     if (!token) return;
     const socket = io({ auth: { token } });
     socket.on('session:ready', () => {
+      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
       void queryClient.invalidateQueries({ queryKey: ['kitchen'] });
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
       setLive(true);
@@ -65,6 +66,9 @@ export function Layout() {
     };
     socket.on('catalog:changed', refreshConfiguration);
     socket.on('tables:changed', refreshConfiguration);
+    socket.on('inventory:changed', () => {
+      void queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    });
     socket.on('kitchen:changed', () => {
       void queryClient.invalidateQueries({ queryKey: ['kitchen'] });
     });
@@ -139,7 +143,9 @@ export function Layout() {
                 ? 'Kitchen display'
                 : location.pathname === '/cashier'
                   ? 'Cashier'
-                  : 'Workspace overview';
+                  : location.pathname === '/inventory'
+                    ? 'Inventory'
+                    : 'Workspace overview';
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only z-50 bg-card p-4 focus:not-sr-only focus:fixed">
@@ -179,6 +185,9 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-3">WORKSPACE</p>}
           {[
             { to: '/', label: 'Overview', icon: LayoutDashboard },
+            ...(user.permissions.includes('inventory:read')
+              ? [{ to: '/inventory', label: 'Inventory', icon: Package }]
+              : []),
             ...(user.permissions.includes('payments:write')
               ? [{ to: '/cashier', label: 'Cashier', icon: ReceiptText }]
               : []),
@@ -221,7 +230,6 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-2 pt-7">COMING NEXT</p>}
           {[
             { label: 'Orders & bills', icon: ReceiptText },
-            { label: 'Inventory', icon: Package },
             { label: 'Reports', icon: BarChart3 },
             { label: 'Settings', icon: Settings },
           ].map((n) => (
@@ -265,7 +273,7 @@ export function Layout() {
                 )}
               />
               {health.isSuccess ? 'Database connected' : 'Checking connection'}
-              <span className="ml-auto">v0.5</span>
+              <span className="ml-auto">v0.6</span>
             </div>
           )}
         </div>

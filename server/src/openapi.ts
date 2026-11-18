@@ -403,11 +403,66 @@ for (const [path, method, summary] of [
       },
     },
   };
+for (const resource of ['ingredients', 'recipes', 'movements', 'suppliers', 'purchases'])
+  paths[`/inventory/${resource}`] = {
+    get: {
+      summary: `List ${resource}; inventory:read`,
+      parameters: [{ name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } }],
+      responses: {
+        '200': response('data: {items, pagination}; 50 items per page'),
+        '403': response('Permission denied'),
+      },
+    },
+  };
+for (const [path, method, summary] of [
+  ['ingredients', 'post', 'Create ingredient; name, unit g/ml/each, lowStock'],
+  ['suppliers', 'post', 'Create supplier; name, contact'],
+  ['purchases', 'post', 'Create purchase; supplierId, lines [{ingredientId, quantity}]'],
+  ['purchases/{id}', 'patch', 'Receive full order or cancel; version, status RECEIVED/CANCELLED'],
+  [
+    'recipes/{id}',
+    'put',
+    'Save menu recipe; version nullable on creation, components [{ingredientId, quantity}]',
+  ],
+  [
+    'movements',
+    'post',
+    'Record movement; ingredientId, version, kind RECEIVE/ADJUST/WASTE, delta, reason, UUID key',
+  ],
+] as const) {
+  const key = `/inventory/${path}`;
+  paths[key] = {
+    ...paths[key],
+    [method]: {
+      summary,
+      description: 'Requires inventory:write; transactional writes with audit records.',
+      ...(path.includes('{id}')
+        ? {
+            parameters: [
+              {
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: { type: 'string', pattern: '^[a-fA-F0-9]{24}$' },
+              },
+            ],
+          }
+        : {}),
+      responses: {
+        '200': response('Persisted record'),
+        '201': response('Created record'),
+        '400': response('Invalid input'),
+        '403': response('Permission denied'),
+        '409': response('Version, stock or duplicate-key conflict'),
+      },
+    },
+  };
+}
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Gather POS - Phase 5 cash workflows',
-    version: '0.5.0',
+    title: 'Gather POS - Phase 6',
+    version: '0.6.0',
     description:
       'Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions.',
   },

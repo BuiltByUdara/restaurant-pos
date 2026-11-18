@@ -1,4 +1,5 @@
 import express from 'express';
+import { inventoryRoutes } from './modules/inventory/routes.js';
 import { billingRoutes } from './modules/billing/routes.js';
 import { kitchenRoutes } from './modules/kitchen/routes.js';
 import { orderRoutes } from './modules/orders/routes.js';
@@ -59,7 +60,7 @@ export function createApp(config: Config) {
       data: {
         status: ready ? 'ok' : 'unavailable',
         database: ready ? 'connected' : 'disconnected',
-        phase: 5,
+        phase: 6,
       },
     });
   });
@@ -68,6 +69,7 @@ export function createApp(config: Config) {
   app.use('/api/v1/orders', orderRoutes(auth, events));
   app.use('/api/v1/kitchen', kitchenRoutes(auth, events));
   app.use('/api/v1/billing', billingRoutes(auth, events));
+  app.use('/api/v1/inventory', inventoryRoutes(auth, events));
   app.use('/api/v1/catalog', configurationRoutes(auth, events, 'catalog'));
   app.use('/api/v1/dining', configurationRoutes(auth, events, 'dining'));
   app.use((_req, _res) => {

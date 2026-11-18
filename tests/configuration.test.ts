@@ -1,5 +1,13 @@
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
+import {
+  initializeInventory,
+  Ingredient,
+  Recipe,
+  StockMovement,
+  Supplier,
+  PurchaseOrder,
+} from '../server/src/modules/inventory/models';
 import { initializeBilling } from '../server/src/modules/billing/models';
 import { KitchenTicket } from '../server/src/modules/kitchen/model';
 import { recoverKitchenTickets } from '../server/src/modules/kitchen/migrate';
@@ -43,6 +51,7 @@ beforeAll(async () => {
   await mongoose.connect(mongo.getUri());
   await initializeConfiguration();
   await initializeBilling();
+  await initializeInventory();
   await KitchenTicket.init();
   await Promise.all([Role.init(), User.init(), Session.init(), AuditLog.init()]);
 });
@@ -59,6 +68,11 @@ beforeEach(async () => {
     AuditLog.deleteMany({}),
     KitchenTicket.deleteMany({}),
     OrderModel.deleteMany({}),
+    Ingredient.deleteMany({}),
+    Recipe.deleteMany({}),
+    StockMovement.deleteMany({}),
+    Supplier.deleteMany({}),
+    PurchaseOrder.deleteMany({}),
   ]);
   const hashed = await passwordHash('Test-configuration-123!');
   application = createApp(config);
@@ -98,6 +112,61 @@ async function category(name = 'Mains') {
     )
   ).body.data;
 }
+it('protects inventory APIs, receives stock and consumes recipes atomically on submission', async () => {
+  await request(application.app).get('/api/v1/inventory/ingredients').expect(401);
+  await call('get', 'inventory/ingredients', undefined, waiterToken).expect(403);
+  await call(
+    'post',
+    'inventory/ingredients',
+    { name: 'Rice', unit: 'g', lowStock: 10 },
+    kitchenToken,
+  ).expect(403);
+  const ingredient = (
+    await call('post', 'inventory/ingredients', { name: 'Rice', unit: 'g', lowStock: 10 }).expect(
+      201,
+    )
+  ).body.data;
+  const movement = {
+    ingredientId: ingredient._id,
+    version: 0,
+    kind: 'RECEIVE',
+    delta: 200,
+    reason: 'Opening delivery',
+    key: randomUUID(),
+  };
+  await call('post', 'inventory/movements', movement).expect(201);
+  await call('post', 'inventory/movements', movement).expect(201);
+  await call('post', 'inventory/movements', { ...movement, delta: 300 }).expect(409);
+  const cat = await category();
+  const product = (await call('post', 'catalog/menu-items', itemFields(cat.id)).expect(201)).body
+    .data;
+  await call('put', `inventory/recipes/${product.id}`, {
+    version: null,
+    components: [{ ingredientId: ingredient._id, quantity: 100 }],
+  }).expect(200);
+  const order = (
+    await call('post', 'orders', {
+      lines: [{ menuItemId: product.id, quantity: 3, optionIds: [], notes: '' }],
+    }).expect(201)
+  ).body.data;
+  await call('patch', `orders/${order._id}/status`, { version: 0, status: 'SUBMITTED' }).expect(
+    409,
+  );
+  expect(await KitchenTicket.countDocuments({ orderId: order._id })).toBe(0);
+  expect((await OrderModel.findById(order._id))!.status).toBe('OPEN');
+  await call('post', 'inventory/movements', {
+    ...movement,
+    version: 1,
+    delta: 100,
+    key: randomUUID(),
+  }).expect(201);
+  await call('patch', `orders/${order._id}/status`, { version: 0, status: 'SUBMITTED' }).expect(
+    200,
+  );
+  expect((await Ingredient.findById(ingredient._id))!.stock).toBe(0);
+  await call('patch', `orders/${order._id}/status`, { version: 1, status: 'VOIDED' }).expect(200);
+  expect((await Ingredient.findById(ingredient._id))!.stock).toBe(0);
+});
 it('requires payment permissions and separate manager approval for financial actions', async () => {
   await request(application.app).get('/api/v1/billing/shifts').expect(401);
   await call('get', 'billing/shifts', undefined, waiterToken).expect(403);
@@ -494,6 +563,18 @@ describe('Phase 2 configuration', () => {
       );
       await ready;
       let kitchenEvents = 0;
+      kitchen.on('inventory:changed', () => kitchenEvents++);
+      const inventoryEvent = new Promise<void>((resolve) =>
+        owner.once('inventory:changed', () => resolve()),
+      );
+      await call('post', 'inventory/ingredients', {
+        name: 'Socket ingredient',
+        unit: 'each',
+        lowStock: 1,
+      }).expect(201);
+      await inventoryEvent;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(kitchenEvents).toBe(0);
       kitchen.on('tables:changed', () => kitchenEvents++);
       const event = new Promise<{ id: string }>((resolve) => owner.once('tables:changed', resolve));
       const f = await floor();

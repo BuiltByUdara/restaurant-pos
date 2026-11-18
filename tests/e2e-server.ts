@@ -2,6 +2,7 @@
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { createServer } from 'node:http';
+import { initializeInventory } from '../server/src/modules/inventory/models';
 import { initializeBilling } from '../server/src/modules/billing/models';
 import { createApp } from '../server/src/app';
 import { attachRealtime } from '../server/src/realtime';
@@ -35,6 +36,7 @@ const config = {
 const owner = await User.findOne({ email: 'owner@example.test' });
 await seedDemoCatalog(owner!.id);
 await initializeBilling();
+await initializeInventory();
 const { app, auth, events } = createApp(config);
 const http = createServer(app);
 const io = attachRealtime(http, auth, config, events);

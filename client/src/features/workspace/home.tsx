@@ -82,7 +82,7 @@ export function Workspace() {
             </p>
           </div>
           <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-            Phase 5 of 8
+            Phase 6 of 8
           </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
