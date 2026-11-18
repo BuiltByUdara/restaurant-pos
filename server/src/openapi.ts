@@ -458,11 +458,75 @@ for (const [path, method, summary] of [
     },
   };
 }
+
+for (const endpoint of ['sales', 'dashboard']) {
+  paths['/reporting/' + endpoint] = {
+    get: {
+      summary: 'Business-timezone ' + endpoint + ' aggregates',
+      description:
+        'Requires ' +
+        (endpoint === 'sales' ? 'reports:read' : 'dashboard:read') +
+        '. Inclusive local dates, maximum 367 days. Money uses integer minor units.',
+      parameters: ['from', 'to'].map((name) => ({
+        name,
+        in: 'query',
+        required: true,
+        schema: { type: 'string', format: 'date' },
+      })),
+      responses: {
+        '200': response('Report aggregates'),
+        '400': response('Invalid date range'),
+        '403': response('Permission denied'),
+      },
+    },
+  };
+}
+paths['/reporting/settings'] = {
+  get: {
+    summary: 'Read restaurant name, timezone, receipt footer and version',
+    responses: { '200': response('Authenticated restaurant settings') },
+  },
+  put: {
+    summary: 'Update restaurant settings',
+    description:
+      'Requires settings:write. Body: name, timezone (IANA), receiptFooter, version. Stale versions return 409.',
+    responses: {
+      '200': response('Updated settings'),
+      '400': response('Invalid settings'),
+      '403': response('Permission denied'),
+      '409': response('Version conflict'),
+    },
+  },
+};
+for (const [path, method] of [
+  ['/staff', 'post'],
+  ['/staff/{id}', 'put'],
+] as const) {
+  paths[path] = {
+    ...paths[path],
+    [method]: {
+      summary:
+        method === 'post' ? 'Create staff account' : 'Update staff account and revoke sessions',
+      description:
+        'Requires staff:read and staff:write. Body: name, email, role, active, password (required on create, 14+ characters), version (required on update). Owner protection and permission escalation checks apply.',
+      ...(method === 'put'
+        ? { parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }] }
+        : {}),
+      responses: {
+        '200': response('Updated staff'),
+        '201': response('Created staff'),
+        '400': response('Invalid input'),
+        '403': response('Permission denied'),
+        '409': response('Version, duplicate email or owner protection conflict'),
+      },
+    },
+  };
+}
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Gather POS - Phase 6',
-    version: '0.6.0',
+    title: 'Gather POS - Phase 7',
+    version: '0.7.0',
     description:
       'Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions.',
   },

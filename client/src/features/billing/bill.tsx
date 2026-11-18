@@ -31,6 +31,11 @@ type BillData = {
   refunds: { paymentId: string; amountMinor: number; reason: string }[];
 };
 export function BillPanel({ id }: { id: string }) {
+  const restaurant = useQuery({
+    queryKey: ['restaurant-settings'],
+    queryFn: () =>
+      api<{ name: string; receiptFooter: string; timezone: string }>('/reporting/settings'),
+  });
   const cache = useQueryClient();
   const query = useQuery({
     queryKey: ['bill', id],
@@ -72,11 +77,15 @@ export function BillPanel({ id }: { id: string }) {
       <h2 className="text-xl">Bill #{id.slice(-8)}</h2>
       {error && <p role="alert">{error}</p>}
       <div id="receipt" style={{ maxWidth: `${width}mm` }}>
-        <h3>Gather Restaurant</h3>
+        <h3>{restaurant.data?.name || 'Gather Restaurant'}</h3>
         <p>
           Order #{id.slice(-8)} · {data.order.status}
         </p>
-        <p>{new Date(data.order.createdAt).toLocaleString()}</p>
+        <p>
+          {new Date(data.order.createdAt).toLocaleString(undefined, {
+            timeZone: restaurant.data?.timezone || 'Asia/Colombo',
+          })}
+        </p>
         {data.order.lines.map((l, i) => (
           <p key={i}>
             {l.quantity} × {l.name} —{' '}
@@ -109,7 +118,7 @@ export function BillPanel({ id }: { id: string }) {
             Refund {money(r.amountMinor)} · {r.reason}
           </p>
         ))}
-        <p>Thank you for dining with us.</p>
+        <p>{restaurant.data?.receiptFooter || 'Thank you for dining with us.'}</p>
       </div>
       <label>
         Receipt width{' '}

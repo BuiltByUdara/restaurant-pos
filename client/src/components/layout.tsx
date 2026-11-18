@@ -145,7 +145,13 @@ export function Layout() {
                   ? 'Cashier'
                   : location.pathname === '/inventory'
                     ? 'Inventory'
-                    : 'Workspace overview';
+                    : location.pathname === '/dashboard'
+                      ? 'Dashboard'
+                      : location.pathname === '/reports'
+                        ? 'Reports'
+                        : location.pathname === '/settings'
+                          ? 'Restaurant settings'
+                          : 'Workspace overview';
   return (
     <div className="min-h-screen bg-background">
       <a href="#main-content" className="sr-only z-50 bg-card p-4 focus:not-sr-only focus:fixed">
@@ -185,6 +191,15 @@ export function Layout() {
           {!collapsed && <p className="eyebrow px-3 pb-3">WORKSPACE</p>}
           {[
             { to: '/', label: 'Overview', icon: LayoutDashboard },
+            ...(user.permissions.includes('dashboard:read')
+              ? [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
+              : []),
+            ...(user.permissions.includes('reports:read')
+              ? [{ to: '/reports', label: 'Reports', icon: BarChart3 }]
+              : []),
+            ...(user.permissions.includes('settings:write')
+              ? [{ to: '/settings', label: 'Settings', icon: Settings }]
+              : []),
             ...(user.permissions.includes('inventory:read')
               ? [{ to: '/inventory', label: 'Inventory', icon: Package }]
               : []),
@@ -228,11 +243,7 @@ export function Layout() {
             </NavLink>
           ))}
           {!collapsed && <p className="eyebrow px-3 pb-2 pt-7">COMING NEXT</p>}
-          {[
-            { label: 'Orders & bills', icon: ReceiptText },
-            { label: 'Reports', icon: BarChart3 },
-            { label: 'Settings', icon: Settings },
-          ].map((n) => (
+          {[{ label: 'Orders & bills', icon: ReceiptText }].map((n) => (
             <div
               key={n.label}
               title={`${n.label} — planned for a later phase`}
@@ -273,7 +284,7 @@ export function Layout() {
                 )}
               />
               {health.isSuccess ? 'Database connected' : 'Checking connection'}
-              <span className="ml-auto">v0.6</span>
+              <span className="ml-auto">v0.7</span>
             </div>
           )}
         </div>

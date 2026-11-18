@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Gather POS - Phase 6",
-    "version": "0.6.0",
+    "title": "Gather POS - Phase 7",
+    "version": "0.7.0",
     "description": "Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions."
   },
   "servers": [
@@ -2463,6 +2463,27 @@
             "description": "Permission denied"
           }
         }
+      },
+      "post": {
+        "summary": "Create staff account",
+        "description": "Requires staff:read and staff:write. Body: name, email, role, active, password (required on create, 14+ characters), version (required on update). Owner protection and permission escalation checks apply.",
+        "responses": {
+          "200": {
+            "description": "Updated staff"
+          },
+          "201": {
+            "description": "Created staff"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, duplicate email or owner protection conflict"
+          }
+        }
       }
     },
     "/orders": {
@@ -3275,6 +3296,141 @@
           },
           "409": {
             "description": "Version, stock or duplicate-key conflict"
+          }
+        }
+      }
+    },
+    "/reporting/sales": {
+      "get": {
+        "summary": "Business-timezone sales aggregates",
+        "description": "Requires reports:read. Inclusive local dates, maximum 367 days. Money uses integer minor units.",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report aggregates"
+          },
+          "400": {
+            "description": "Invalid date range"
+          },
+          "403": {
+            "description": "Permission denied"
+          }
+        }
+      }
+    },
+    "/reporting/dashboard": {
+      "get": {
+        "summary": "Business-timezone dashboard aggregates",
+        "description": "Requires dashboard:read. Inclusive local dates, maximum 367 days. Money uses integer minor units.",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report aggregates"
+          },
+          "400": {
+            "description": "Invalid date range"
+          },
+          "403": {
+            "description": "Permission denied"
+          }
+        }
+      }
+    },
+    "/reporting/settings": {
+      "get": {
+        "summary": "Read restaurant name, timezone, receipt footer and version",
+        "responses": {
+          "200": {
+            "description": "Authenticated restaurant settings"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update restaurant settings",
+        "description": "Requires settings:write. Body: name, timezone (IANA), receiptFooter, version. Stale versions return 409.",
+        "responses": {
+          "200": {
+            "description": "Updated settings"
+          },
+          "400": {
+            "description": "Invalid settings"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version conflict"
+          }
+        }
+      }
+    },
+    "/staff/{id}": {
+      "put": {
+        "summary": "Update staff account and revoke sessions",
+        "description": "Requires staff:read and staff:write. Body: name, email, role, active, password (required on create, 14+ characters), version (required on update). Owner protection and permission escalation checks apply.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated staff"
+          },
+          "201": {
+            "description": "Created staff"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version, duplicate email or owner protection conflict"
           }
         }
       }

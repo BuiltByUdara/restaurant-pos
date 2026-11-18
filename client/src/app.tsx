@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { Reports } from './features/reporting/reports';
+import { Settings } from './features/reporting/settings';
 import { Inventory } from './features/inventory/inventory';
 import { Cashier } from './features/billing/cashier';
 import { Kitchen } from './features/kitchen/display';
@@ -89,6 +91,30 @@ export function App() {
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route index element={<Workspace />} />
+            <Route
+              path="dashboard"
+              element={
+                <FeatureGuard permission="dashboard:read">
+                  <Reports dashboard />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <FeatureGuard permission="reports:read">
+                  <Reports />
+                </FeatureGuard>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <FeatureGuard permission="settings:write">
+                  <Settings />
+                </FeatureGuard>
+              }
+            />
             <Route
               path="inventory"
               element={

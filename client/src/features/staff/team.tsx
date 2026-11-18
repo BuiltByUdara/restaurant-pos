@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { StaffEditor } from './editor';
 import { Users, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Button } from '../../components/ui/button';
@@ -119,10 +120,7 @@ export function Team() {
           </div>
         </div>
       </section>
-      <p className="text-xs text-muted-foreground">
-        Account creation, role changes, and activation controls are scheduled for the
-        staff-management phase.
-      </p>
+      <StaffEditor />
     </div>
   );
 }

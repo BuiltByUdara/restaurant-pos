@@ -8,14 +8,14 @@ import { createApp } from '../server/src/app';
 import { attachRealtime } from '../server/src/realtime';
 import { Role, User } from '../server/src/modules/auth/models';
 import { passwordHash } from '../server/src/modules/auth/service';
-import { rolePermissions } from '../shared/src';
+import { roleNames, rolePermissions } from '../shared/src';
 import { seedDemoCatalog } from '../server/src/modules/configuration/demo';
 const mongo = await MongoMemoryReplSet.create({
   replSet: { count: 1 },
   binary: { version: '7.0.24' },
 });
 await mongoose.connect(mongo.getUri());
-for (const name of ['Owner', 'Cashier'] as const) {
+for (const name of roleNames) {
   const role = await Role.create({ name, permissions: rolePermissions[name] });
   await User.create({
     name: `Test ${name}`,

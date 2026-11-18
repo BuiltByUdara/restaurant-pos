@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { RestaurantSettings } from './modules/reporting/settings.js';
 import { initializeInventory } from './modules/inventory/models.js';
 import { initializeBilling } from './modules/billing/models.js';
 import mongoose from 'mongoose';
@@ -16,6 +17,7 @@ const config = readConfig(),
 try {
   await connectDatabase(config.MONGODB_URI);
   await initializeConfiguration();
+  await RestaurantSettings.init();
   await initializeBilling();
   await initializeInventory();
   await OrderModel.init();

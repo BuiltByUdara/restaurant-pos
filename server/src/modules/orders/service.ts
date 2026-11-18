@@ -89,6 +89,7 @@ export async function createOrder(input: unknown, actor: string, id?: string, ve
       lines.push({
         menuItemId: String(item._id),
         name: item.name,
+        categoryId: String(item.categoryId),
         station: item.station || 'Kitchen',
         unitPriceMinor: item.priceMinor,
         quantity: line.quantity,

@@ -1,5 +1,7 @@
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
+import { RestaurantSettings } from '../server/src/modules/reporting/settings';
+import { Payment, CashMovement, Shift } from '../server/src/modules/billing/models';
 import {
   initializeInventory,
   Ingredient,
@@ -51,6 +53,7 @@ beforeAll(async () => {
   await mongoose.connect(mongo.getUri());
   await initializeConfiguration();
   await initializeBilling();
+  await RestaurantSettings.init();
   await initializeInventory();
   await KitchenTicket.init();
   await Promise.all([Role.init(), User.init(), Session.init(), AuditLog.init()]);
@@ -68,6 +71,10 @@ beforeEach(async () => {
     AuditLog.deleteMany({}),
     KitchenTicket.deleteMany({}),
     OrderModel.deleteMany({}),
+    RestaurantSettings.deleteMany({}),
+    Payment.deleteMany({}),
+    CashMovement.deleteMany({}),
+    Shift.deleteMany({}),
     Ingredient.deleteMany({}),
     Recipe.deleteMany({}),
     StockMovement.deleteMany({}),
@@ -112,6 +119,116 @@ async function category(name = 'Mains') {
     )
   ).body.data;
 }
+it('reports real cash inside a daylight-saving business day and protects settings', async () => {
+  await call('get', 'reporting/sales?from=2026-03-08&to=2026-03-08', undefined, waiterToken).expect(
+    403,
+  );
+  await call(
+    'put',
+    'reporting/settings',
+    { name: 'Test Restaurant', timezone: 'America/New_York', receiptFooter: 'Thanks', version: 0 },
+    waiterToken,
+  ).expect(403);
+  await call('put', 'reporting/settings', {
+    name: 'Test Restaurant',
+    timezone: 'America/New_York',
+    receiptFooter: 'Thanks',
+    version: 0,
+  }).expect(200);
+  await call('put', 'reporting/settings', {
+    name: 'Other',
+    timezone: 'UTC',
+    receiptFooter: '',
+    version: 0,
+  }).expect(409);
+  const shiftId = new mongoose.Types.ObjectId(),
+    orderId = new mongoose.Types.ObjectId();
+  for (const date of [
+    '2026-03-08T04:59:59Z',
+    '2026-03-08T05:00:00Z',
+    '2026-03-09T03:59:59Z',
+    '2026-03-09T04:00:00Z',
+  ])
+    await Payment.create({
+      orderId,
+      shiftId,
+      actorId: ownerId,
+      idempotencyKey: randomUUID(),
+      requestHash: 'test',
+      method: 'CASH',
+      amountMinor: 100,
+      tenderedMinor: 100,
+      changeMinor: 0,
+      createdAt: new Date(date),
+    });
+  const cat = await category();
+  await OrderModel.create({
+    createdBy: ownerId,
+    status: 'COMPLETED',
+    subtotalMinor: 240,
+    createdAt: new Date('2026-03-07T12:00:00Z'),
+    history: [{ status: 'COMPLETED', at: new Date('2026-03-08T12:00:00Z') }],
+    lines: [
+      {
+        menuItemId: 'snapshot-item',
+        name: 'Snapshot dish',
+        categoryId: cat.id,
+        quantity: 2,
+        unitPriceMinor: 100,
+        modifiers: [{ priceMinor: 20 }],
+      },
+    ],
+    bill: { totalMinor: 253, discountMinor: 20, taxMinor: 23, serviceMinor: 10 },
+  });
+  const report = (await call('get', 'reporting/sales?from=2026-03-08&to=2026-03-08').expect(200))
+    .body.data;
+  expect(report.products[0]).toMatchObject({ quantity: 2, grossMinor: 240 });
+  expect(report.categories[0]).toMatchObject({ quantity: 2, grossMinor: 240 });
+  expect(report.charges).toMatchObject({
+    completed: 1,
+    totalMinor: 253,
+    discountMinor: 20,
+    taxMinor: 23,
+    serviceMinor: 10,
+  });
+  expect(report.orders).toEqual([]);
+
+  expect(report.cashMinor).toBe(200);
+  expect(report.payments[0]._id).toBe('2026-03-08');
+  expect(report.cashiers[0].cashMinor).toBe(200);
+  await call('get', 'reporting/sales?from=2026-02-30&to=2026-03-08').expect(400);
+});
+it('creates staff without leaking hashes and revokes sessions on deactivation', async () => {
+  await call('post', 'staff', { name: 'No access' }, waiterToken).expect(403);
+  const body = {
+    name: 'New Waiter',
+    email: 'new@example.test',
+    role: 'Waiter',
+    active: true,
+    password: 'Test-staff-password-123!',
+  };
+  const created = (await call('post', 'staff', body).expect(201)).body.data;
+  expect(created.passwordHash).toBeUndefined();
+  const login = await request(application.app)
+    .post('/api/v1/auth/login')
+    .send({ email: body.email, password: body.password })
+    .expect(200);
+  await call('put', `staff/${created.id}`, {
+    ...body,
+    active: false,
+    version: created.version,
+  }).expect(200);
+  await call('get', 'auth/me', undefined, login.body.data.accessToken).expect(401);
+  await call('put', `staff/${created.id}`, { ...body, version: created.version }).expect(409);
+  const owner = await User.findById(ownerId);
+  await call('put', `staff/${ownerId}`, {
+    name: 'Owner',
+    email: owner!.email,
+    role: 'Owner',
+    active: false,
+    version: owner!.__v,
+  }).expect(409);
+});
 it('protects inventory APIs, receives stock and consumes recipes atomically on submission', async () => {
   await request(application.app).get('/api/v1/inventory/ingredients').expect(401);
   await call('get', 'inventory/ingredients', undefined, waiterToken).expect(403);
