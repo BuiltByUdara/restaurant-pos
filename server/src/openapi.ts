@@ -522,11 +522,25 @@ for (const [path, method] of [
     },
   };
 }
+paths['/live'] = {
+  get: {
+    summary: 'Process liveness',
+    security: [],
+    responses: { '200': response('Process alive') },
+  },
+};
+paths['/health'] = {
+  get: {
+    summary: 'Writable replica-set readiness',
+    security: [],
+    responses: { '200': response('Ready'), '503': response('Unavailable or draining') },
+  },
+};
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Gather POS - Phase 7',
-    version: '0.7.0',
+    title: 'Gather POS - Phase 8',
+    version: '0.8.0',
     description:
       'Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions.',
   },

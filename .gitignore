@@ -7,3 +7,10 @@ test-results/
 playwright-report/
 *.log
 .cache/
+.env.*
+!.env.example
+secrets/
+backups/
+*.archive.gz
+*.pem
+*.key

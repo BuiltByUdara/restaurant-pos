@@ -12,10 +12,12 @@ import { initializeConfiguration } from './modules/configuration/models.js';
 import { OrderModel } from './modules/orders/model.js';
 import { KitchenTicket } from './modules/kitchen/model.js';
 import { recoverKitchenTickets } from './modules/kitchen/migrate.js';
+import { Role, User, Session, AuditLog } from './modules/auth/models.js';
 const config = readConfig(),
   logger = pino({ level: config.LOG_LEVEL });
 try {
   await connectDatabase(config.MONGODB_URI);
+  await Promise.all([Role.init(), User.init(), Session.init(), AuditLog.init()]);
   await initializeConfiguration();
   await RestaurantSettings.init();
   await initializeBilling();
@@ -23,19 +25,22 @@ try {
   await OrderModel.init();
   await KitchenTicket.init();
   await recoverKitchenTickets();
-  const { app, auth, events } = createApp(config);
+  const lifecycle = { stopping: false };
+  const { app, auth, events } = createApp(config, lifecycle);
   const http = createServer(app);
   const io = attachRealtime(http, auth, config, events);
+  http.requestTimeout = 30000;
+  http.headersTimeout = 15000;
   http.listen(config.PORT, () => logger.info({ port: config.PORT }, 'POS API ready'));
   let stopping = false;
   const shutdown = () => {
     if (stopping) return;
     stopping = true;
+    lifecycle.stopping = true;
     logger.info('Shutting down');
     const deadline = setTimeout(() => process.exit(1), 10000);
     deadline.unref();
-    io.close();
-    http.close(async () => {
+    io.close(async () => {
       await mongoose.disconnect();
       clearTimeout(deadline);
       process.exit(0);

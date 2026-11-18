@@ -10,7 +10,7 @@ import cookieParser from 'cookie-parser';
 import { pinoHttp } from 'pino-http';
 import { randomUUID } from 'node:crypto';
 import { rateLimit } from 'express-rate-limit';
-import mongoose from 'mongoose';
+import { databaseReady } from './lib/readiness.js';
 import { EventEmitter } from 'node:events';
 import { configurationRoutes } from './modules/configuration/routes.js';
 import type { Config } from './config.js';
@@ -19,7 +19,7 @@ import { authRoutes } from './modules/auth/routes.js';
 import { staffRoutes } from './modules/staff/routes.js';
 import { errorHandler, AppError } from './lib/errors.js';
 
-export function createApp(config: Config) {
+export function createApp(config: Config, lifecycle = { stopping: false }) {
   const app = express(),
     auth = createAuthService(config);
   const events = new EventEmitter();
@@ -45,6 +45,22 @@ export function createApp(config: Config) {
     next();
   });
   app.use(express.json({ limit: '16kb' }), cookieParser());
+  app.get('/api/v1/live', (_req, res) => res.json({ data: { status: 'alive' } }));
+  app.get('/api/v1/health', async (_req, res) => {
+    const ready = !lifecycle.stopping && (await databaseReady());
+    res.status(ready ? 200 : 503).json({
+      data: {
+        status: ready ? 'ok' : 'unavailable',
+        database: ready ? 'connected' : 'unavailable',
+        phase: 8,
+      },
+    });
+  });
+  app.use((_req, _res, next) => {
+    if (lifecycle.stopping)
+      throw new AppError(503, 'SHUTTING_DOWN', 'Server is restarting. Please retry shortly.');
+    next();
+  });
   app.use(
     '/api',
     rateLimit({
@@ -55,16 +71,6 @@ export function createApp(config: Config) {
       message: { error: { code: 'RATE_LIMIT', message: 'Too many requests. Try again shortly.' } },
     }),
   );
-  app.get('/api/v1/health', (_req, res) => {
-    const ready = mongoose.connection.readyState === 1;
-    res.status(ready ? 200 : 503).json({
-      data: {
-        status: ready ? 'ok' : 'unavailable',
-        database: ready ? 'connected' : 'disconnected',
-        phase: 7,
-      },
-    });
-  });
   app.use('/api/v1/auth', authRoutes(auth, config));
   app.use('/api/v1/staff', staffRoutes(auth));
   app.use('/api/v1/orders', orderRoutes(auth, events));

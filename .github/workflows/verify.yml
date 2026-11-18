@@ -1,0 +1,47 @@
+name: Verify POS
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+      - name: Install database tools for recovery drill
+        run: |
+          mkdir -p .cache/db-tools
+          curl --fail --location https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2404-x86_64-100.20.1.tgz -o .cache/db-tools/tools.tgz
+          tar -xzf .cache/db-tools/tools.tgz -C .cache/db-tools
+          echo "$PWD/.cache/db-tools/mongodb-database-tools-ubuntu2404-x86_64-100.20.1/bin" >> "$GITHUB_PATH"
+      - run: npm run test:backup
+      - run: npm run build
+      - run: npm run test:runtime
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: docker build -f server/Dockerfile -t gather-api:test .
+      - run: docker build -f client/Dockerfile -t gather-web:test .
+      - run: docker run --rm --add-host server:127.0.0.1 gather-web:test nginx -t
+      - run: npm run setup
+      - run: docker compose --profile app up -d --build --wait --wait-timeout 180
+      - run: curl --fail http://localhost:8080/api/v1/health
+      - run: curl --fail http://localhost:8080/ --output /dev/null
+      - name: Stop evaluation containers
+        if: always()
+        run: |
+          if [ -f .env ]; then docker compose --profile app down --remove-orphans; fi
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-artifacts
+          path: test-results/
+          retention-days: 7

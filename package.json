@@ -29,14 +29,18 @@
     "build": "npm run build -w shared && npm run build -w server && npm run build -w client",
     "typecheck": "npm run typecheck --workspaces",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/test-e2e.mjs",
     "seed": "npm run seed -w server",
     "migrate:phase2": "npm run migrate:phase2 -w server",
     "seed:demo": "npm run seed:demo -w server",
     "docs:api": "npm run docs:api -w server",
     "setup": "node scripts/setup.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "backup": "node scripts/backup.mjs backup",
+    "restore": "node scripts/backup.mjs restore",
+    "test:backup": "node scripts/backup-drill.mjs",
+    "test:runtime": "node scripts/runtime-smoke.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

@@ -1,6 +1,6 @@
 # Gather · Single-restaurant POS
 
-Phases 1–6 of the supplied implementation plan: a working MERN monorepo with staff authentication, role permissions, menu/catalog management, and synchronized floor plans. Later POS modules are explicitly marked as planned. POS ordering is available; payments and inventory remain later phases. See [Phase 3 guide](docs/phase-3.md).
+Phases 1-8 provide staff authentication, menu and table management, ordering, kitchen tickets, cash billing, inventory, reports, settings and operational tooling. See [Phase 8 operations guide](docs/phase-8.md) for deployment, backup/restore and remaining product boundaries.
 
 **Upgrading Phase 1:** run `npm run migrate:phase2` with MongoDB running, then sign out and back in. See [Phase 2 guide](docs/phase-2.md) for permissions, workflows and integrity rules. Optional realistic menu data is available through `npm run seed:demo`; the migration itself does not insert business data.
 
@@ -110,14 +110,14 @@ npm run test:e2e
 
 API tests start an isolated MongoDB 7.0 replica set using mongodb-memory-server. Its first run downloads the official MongoDB binary; normal dependency installation skips that optional download. Browser tests start their own temporary database/API and Vite server on ports 4100 and 5174, leaving the development app on 4000/5173 untouched. Tests never clear or seed the restaurant database. Test-only account credentials are confined to test fixtures.
 
-Coverage includes password hashing, credential errors, permission enforcement, account deactivation, pagination, refresh rotation/replay/concurrency, logout, expiry, origin protection, cookie flags, login rate limiting, socket authentication, browser reload, tablet access restrictions, session locking, and sign-out. Transactional billing and kitchen-event delivery tests will be added with those modules.
+Coverage includes password hashing, credential errors, permission enforcement, account deactivation, pagination, refresh rotation/replay/concurrency, logout, expiry, origin protection, cookie flags, login rate limiting, socket authentication, browser reload, tablet access restrictions, session locking, and sign-out. Coverage also includes transactional billing, kitchen delivery, stock consumption, reporting and operational hardening.
 
 ## Entire stack in Docker — local evaluation
 
 ```powershell
 npm run setup
 docker compose --profile app up -d --build
-docker compose exec server npm run seed -w server
+docker compose exec server node server/dist/seed.js
 ```
 
 Open **http://localhost:8080**. The Compose configuration deliberately runs HTTP development mode bound to the host's loopback interface. It is not a public deployment configuration. The MongoDB data volume persists across restarts. Do not use `docker compose down -v` unless you intend to delete the database.
@@ -126,10 +126,10 @@ For production deployment, terminate HTTPS at Nginx or a trusted upstream proxy,
 
 ## Backup and restore
 
-Back up the replica set with `mongodump --archive=/backup/restaurant.archive --gzip --oplog`, using a mounted backup volume and credentials appropriate to your deployment. Encrypt and copy backups off the restaurant host. To restore, stop application writes and restore into a separate isolated replica set with `mongorestore --archive=/backup/restaurant.archive --gzip --oplogReplay`. Check user/role counts and authentication before switching the application connection. Revoke sessions following a disaster recovery. Perform scheduled restore drills; a command example alone is not a verified recovery procedure.
+Use the verified offline backup and restore wrappers described in the [Phase 8 guide](docs/phase-8.md). Stop writers, preserve encrypted off-host copies, restore only into an empty isolated replica set and verify financial/inventory records before switching. Run `npm run test:backup` with MongoDB Database Tools installed for the automated recovery drill.
 
 ## Phase boundary
 
 Phases 1–2 include authentication, roles, menu configuration, and manual floor/table management, not staff account administration. The main seed creates six roles and one owner account. Optional demo seeding adds menu/floor data, never sales. Trusted-terminal PIN login remains optional and unimplemented. PIN hash storage exists, but no PIN login endpoint is advertised.
 
-Phase 3 is implemented: POS cart, server-side order calculations, order lifecycle and table/order assignment. Phase 4 kitchen display and durable tickets are available; see [Phase 4 guide](docs/phase-4.md). Phase 5 cash checkout, refunds, receipts and shifts are available; see [Phase 5 guide](docs/phase-5.md). Card acceptance remains disabled pending processor integration. Phase 6 inventory, recipes, suppliers, full purchase receiving and stock movements are available; see [Phase 6 guide](docs/phase-6.md). Phase 7 dashboards, CSV reports, staff administration and restaurant settings are available; see [Phase 7 guide](docs/phase-7.md). Phase 8 operational hardening and peripheral integration remain. Do not use this foundation release to take live restaurant payments.
+Phase 3 is implemented: POS cart, server-side order calculations, order lifecycle and table/order assignment. Phase 4 kitchen display and durable tickets are available; see [Phase 4 guide](docs/phase-4.md). Phase 5 cash checkout, refunds, receipts and shifts are available; see [Phase 5 guide](docs/phase-5.md). Card acceptance remains disabled pending processor integration. Phase 6 inventory, recipes, suppliers, full purchase receiving and stock movements are available; see [Phase 6 guide](docs/phase-6.md). Phase 7 dashboards, CSV reports, staff administration and restaurant settings are available; see [Phase 7 guide](docs/phase-7.md). Phase 8 hardening, deployment templates and backup tooling are available; see [Phase 8 guide](docs/phase-8.md). Do not use this foundation release to take live restaurant payments.

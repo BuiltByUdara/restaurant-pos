@@ -1,0 +1,45 @@
+name: gather-pos-production
+# External authenticated TLS MongoDB replica set required. No database/API ports are published.
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:?Set the exact https origin}
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      MONGODB_URI_FILE: /run/secrets/mongodb_uri
+      LOG_LEVEL: info
+    secrets: [jwt_secret, mongodb_uri]
+    init: true
+    read_only: true
+    tmpfs: ['/tmp:size=32m,mode=1777']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    stop_grace_period: 15s
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+  web:
+    build:
+      context: ..
+      dockerfile: client/Dockerfile
+    ports: ['443:443']
+    volumes:
+      - ./nginx.production.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${TLS_CERT_FILE:?Set certificate chain file}:/etc/nginx/tls/cert.pem:ro
+      - ${TLS_KEY_FILE:?Set private key file}:/etc/nginx/tls/key.pem:ro
+    depends_on:
+      server: { condition: service_healthy }
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+secrets:
+  jwt_secret:
+    file: ${JWT_SECRET_FILE:?Set JWT secret file}
+  mongodb_uri:
+    file: ${MONGODB_URI_FILE:?Set MongoDB URI secret file}

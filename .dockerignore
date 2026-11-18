@@ -6,3 +6,9 @@ node_modules
 **/dist
 test-results
 playwright-report
+.env.*
+secrets
+backups
+**/*.archive.gz
+**/*.pem
+**/*.key

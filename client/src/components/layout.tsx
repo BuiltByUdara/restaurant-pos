@@ -284,7 +284,7 @@ export function Layout() {
                 )}
               />
               {health.isSuccess ? 'Database connected' : 'Checking connection'}
-              <span className="ml-auto">v0.7</span>
+              <span className="ml-auto">v0.8</span>
             </div>
           )}
         </div>
