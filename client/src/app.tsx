@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { PrintQueue } from './features/billing/print-queue';
 import { Reports } from './features/reporting/reports';
 import { Settings } from './features/reporting/settings';
 import { Inventory } from './features/inventory/inventory';
@@ -91,6 +92,7 @@ export function App() {
         <Route element={<Protected />}>
           <Route element={<Layout />}>
             <Route index element={<Workspace />} />
+            <Route path="printing" element={<PrintQueue />} />
             <Route
               path="dashboard"
               element={

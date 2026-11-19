@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
 import { RestaurantSettings } from '../server/src/modules/reporting/settings';
-import { Payment, CashMovement, Shift } from '../server/src/modules/billing/models';
+import { Payment, CashMovement, Shift, PrintJob } from '../server/src/modules/billing/models';
 import {
   initializeInventory,
   Ingredient,
@@ -75,6 +75,7 @@ beforeEach(async () => {
     Payment.deleteMany({}),
     CashMovement.deleteMany({}),
     Shift.deleteMany({}),
+    PrintJob.deleteMany({}),
     Ingredient.deleteMany({}),
     Recipe.deleteMany({}),
     StockMovement.deleteMany({}),
@@ -719,4 +720,152 @@ describe('Phase 2 configuration', () => {
       await new Promise<void>((resolve) => realtime.close(() => resolve()));
     }
   });
+});
+
+async function restructuringFixture(status = 'SERVED') {
+  return OrderModel.create({
+    createdBy: ownerId,
+    status,
+    subtotalMinor: 360,
+    lines: [
+      {
+        menuItemId: new mongoose.Types.ObjectId().toString(),
+        name: 'Snapshot dish',
+        unitPriceMinor: 100,
+        quantity: 3,
+        notes: '',
+        modifiers: [{ optionId: randomUUID(), name: 'Extra', priceMinor: 20 }],
+      },
+    ],
+  });
+}
+it('splits and merges snapshots without changing stock, rejects stale and unauthorized operations', async () => {
+  const order = await restructuringFixture();
+  const ingredient = await Ingredient.create({
+    name: 'Already consumed',
+    nameKey: 'already consumed',
+    unit: 'each',
+    stock: 97,
+    lowStock: 0,
+  });
+  await StockMovement.create({
+    ingredientId: ingredient._id,
+    orderId: order._id,
+    actorId: ownerId,
+    kind: 'CONSUME',
+    delta: -3,
+    reason: 'Earlier submission',
+    key: randomUUID(),
+  });
+  await call(
+    'post',
+    `orders/${order.id}/split`,
+    { version: 0, quantities: [1] },
+    waiterToken,
+  ).expect(403);
+  await call('post', `orders/${order.id}/split`, { version: 0, quantities: [3] }).expect(400);
+  const split = (
+    await call('post', `orders/${order.id}/split`, { version: 0, quantities: [1] }).expect(200)
+  ).body.data;
+  expect(split.source.subtotalMinor).toBe(240);
+  expect(split.created.subtotalMinor).toBe(120);
+  expect(split.created.status).toBe('SERVED');
+  expect(split.created.tableId).toBeNull();
+  await call('post', `orders/${order.id}/split`, { version: 0, quantities: [1] }).expect(409);
+  const room = await floor('Split room');
+  const table = (await call('post', 'dining/tables', tableFields(room.id)).expect(201)).body.data;
+  await call('patch', `orders/${split.created._id}/table`, {
+    version: 0,
+    tableId: table.id,
+  }).expect(200);
+  const merged = (
+    await call('post', `orders/${order.id}/merge`, {
+      version: 1,
+      sourceId: split.created._id,
+      sourceVersion: 1,
+    }).expect(200)
+  ).body.data;
+  expect((await models.tables.findById(table.id))!.status).toBe('AVAILABLE');
+  expect(merged.subtotalMinor).toBe(360);
+  expect((await OrderModel.findById(split.created._id))!.status).toBe('CANCELLED');
+  expect(await StockMovement.countDocuments()).toBe(1);
+  expect((await Ingredient.findById(ingredient._id))!.stock).toBe(97);
+  expect(await KitchenTicket.countDocuments()).toBe(0);
+  expect(await AuditLog.countDocuments({ action: { $in: ['order.split', 'order.merged'] } })).toBe(
+    2,
+  );
+});
+it('serializes concurrent splits and blocks paid, adjusted and preparing orders', async () => {
+  const order = await restructuringFixture('OPEN');
+  const requests = await Promise.all(
+    [1, 1].map(() => call('post', `orders/${order.id}/split`, { version: 0, quantities: [1] })),
+  );
+  expect(requests.map((r) => r.status).sort()).toEqual([200, 409]);
+  expect(await OrderModel.countDocuments()).toBe(2);
+  for (const status of ['PREPARING', 'COMPLETED']) {
+    const locked = await restructuringFixture(status);
+    await call('post', `orders/${locked.id}/split`, { version: 0, quantities: [1] }).expect(409);
+  }
+  const adjusted = await restructuringFixture();
+  await OrderModel.updateOne({ _id: adjusted._id }, { $set: { bill: { totalMinor: 360 } } });
+  await call('post', `orders/${adjusted.id}/split`, { version: 0, quantities: [1] }).expect(409);
+  const paid = await restructuringFixture();
+  await Payment.create({
+    orderId: paid._id,
+    shiftId: new mongoose.Types.ObjectId(),
+    actorId: ownerId,
+    idempotencyKey: randomUUID(),
+    requestHash: 'test',
+    method: 'CASH',
+    amountMinor: 1,
+    tenderedMinor: 1,
+    changeMinor: 0,
+  });
+  await call('post', `orders/${paid.id}/split`, { version: 0, quantities: [1] }).expect(409);
+});
+it('queues immutable print snapshots idempotently and protects lease transitions', async () => {
+  const order = await restructuringFixture();
+  const body = { orderId: order.id, kind: 'RECEIPT', width: 58, requestKey: randomUUID() };
+  await call('post', 'printing', body, kitchenToken).expect(403);
+  await call('get', 'printing', undefined, waiterToken).expect(403);
+  const job = (await call('post', 'printing', body).expect(201)).body.data;
+  expect((await call('post', 'printing', body).expect(201)).body.data._id).toBe(job._id);
+  await call('post', 'printing', { ...body, width: 80 }).expect(409);
+  await OrderModel.updateOne({ _id: order._id }, { $set: { 'lines.0.name': 'Changed later' } });
+  const list = (await call('get', 'printing').expect(200)).body.data;
+  expect(list[0].content.join(' ')).toContain('Snapshot dish');
+  expect(list[0].content.join(' ')).not.toContain('Changed later');
+  const claims = await Promise.all(
+    [1, 1].map(() => call('post', `printing/${job._id}/claim`, { version: 0 })),
+  );
+  expect(claims.map((r) => r.status).sort()).toEqual([200, 409]);
+  const claimed = claims.find((r) => r.status === 200)!.body.data;
+  expect((await call('get', 'printing').expect(200)).body.data[0].leaseToken).toBeUndefined();
+  await call('post', `printing/${job._id}/finish`, {
+    leaseToken: randomUUID(),
+    status: 'DIALOG_OPENED',
+  }).expect(409);
+  const finished = (
+    await call('post', `printing/${job._id}/finish`, {
+      leaseToken: claimed.leaseToken,
+      status: 'DIALOG_OPENED',
+    }).expect(200)
+  ).body.data;
+  const confirmed = (
+    await call('post', `printing/${job._id}/confirm`, { version: finished.version }).expect(200)
+  ).body.data;
+  const retried = (
+    await call('post', `printing/${job._id}/retry`, { version: confirmed.version }).expect(200)
+  ).body.data;
+  const again = (
+    await call('post', `printing/${job._id}/claim`, { version: retried.version }).expect(200)
+  ).body.data;
+  expect(again.attempts).toBe(2);
+  await call('post', `printing/${job._id}/retry`, { version: again.version }).expect(409);
+  await PrintJob.updateOne({ _id: job._id }, { $set: { leaseUntil: new Date(0) } });
+  await call('post', `printing/${job._id}/retry`, { version: again.version }).expect(200);
+  await call('post', `printing/${job._id}/finish`, {
+    leaseToken: again.leaseToken,
+    status: 'DIALOG_OPENED',
+  }).expect(409);
 });

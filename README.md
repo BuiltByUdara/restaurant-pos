@@ -133,3 +133,7 @@ Use the verified offline backup and restore wrappers described in the [Phase 8 g
 Phases 1–2 include authentication, roles, menu configuration, and manual floor/table management, not staff account administration. The main seed creates six roles and one owner account. Optional demo seeding adds menu/floor data, never sales. Trusted-terminal PIN login remains optional and unimplemented. PIN hash storage exists, but no PIN login endpoint is advertised.
 
 Phase 3 is implemented: POS cart, server-side order calculations, order lifecycle and table/order assignment. Phase 4 kitchen display and durable tickets are available; see [Phase 4 guide](docs/phase-4.md). Phase 5 cash checkout, refunds, receipts and shifts are available; see [Phase 5 guide](docs/phase-5.md). Card acceptance remains disabled pending processor integration. Phase 6 inventory, recipes, suppliers, full purchase receiving and stock movements are available; see [Phase 6 guide](docs/phase-6.md). Phase 7 dashboards, CSV reports, staff administration and restaurant settings are available; see [Phase 7 guide](docs/phase-7.md). Phase 8 hardening, deployment templates and backup tooling are available; see [Phase 8 guide](docs/phase-8.md). Do not use this foundation release to take live restaurant payments.
+
+## Phase 9 follow-up
+
+Durable browser print queues and manager-authorized item splitting/order merging are implemented. See [Phase 9 guide](docs/phase-9.md) and [pilot checklist](docs/phase-9-pilot.md). Production hosting, physical devices and a verified card processor remain unconfigured.

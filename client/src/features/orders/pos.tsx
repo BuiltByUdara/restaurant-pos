@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 import { useAllRecords, money } from '../configuration/api';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../auth/store';
+import { Restructure } from './restructure';
 type Product = {
   id: string;
   name: string;
@@ -412,6 +413,17 @@ export function Pos() {
             </p>
           ))}
           <h3>History</h3>
+          {approve && ['OPEN', 'SERVED'].includes(detail.status) && (
+            <Restructure
+              key={`${detail._id}-${detail.version}`}
+              order={detail}
+              orders={orders.data?.items || []}
+              changed={() => {
+                setDetail(null);
+                void orders.refetch();
+              }}
+            />
+          )}
           {detail.history?.map((h, i) => (
             <p key={i}>
               {h.action || h.status} · {new Date(h.at).toLocaleString()}

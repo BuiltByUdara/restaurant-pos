@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Gather POS - Phase 8",
-    "version": "0.8.0",
+    "title": "Gather POS - Phase 9",
+    "version": "0.9.0",
     "description": "Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions."
   },
   "servers": [
@@ -3442,6 +3442,212 @@
         "responses": {
           "200": {
             "description": "Process alive"
+          }
+        }
+      }
+    },
+    "/orders/{id}/split": {
+      "post": {
+        "summary": "Manager-authorized order split",
+        "description": "Requires orders:write and orders:approve. Unpaid OPEN/SERVED orders with no adjustments only. Split body: version, quantities. Merge body: version, sourceId, sourceVersion.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Committed result"
+          },
+          "400": {
+            "description": "Invalid quantities or limits"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version or eligibility conflict"
+          }
+        }
+      }
+    },
+    "/orders/{id}/merge": {
+      "post": {
+        "summary": "Manager-authorized order merge",
+        "description": "Requires orders:write and orders:approve. Unpaid OPEN/SERVED orders with no adjustments only. Split body: version, quantities. Merge body: version, sourceId, sourceVersion.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Committed result"
+          },
+          "400": {
+            "description": "Invalid quantities or limits"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Version or eligibility conflict"
+          }
+        }
+      }
+    },
+    "/printing": {
+      "get": {
+        "summary": "Own durable print queue",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Print snapshots without claim tokens"
+          },
+          "403": {
+            "description": "Printing permission required"
+          }
+        }
+      },
+      "post": {
+        "summary": "Queue immutable receipt or kitchen document",
+        "description": "Body: orderId, kind RECEIPT/KITCHEN, width 58/80, requestKey UUID. Receipt requires payments:write; kitchen requires kitchen:read.",
+        "responses": {
+          "201": {
+            "description": "Job identifier; duplicate key returns same job"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Key reuse or missing ticket"
+          }
+        }
+      }
+    },
+    "/printing/{id}/claim": {
+      "post": {
+        "summary": "Print job claim",
+        "description": "Body: version. Current actor and document permissions required. Claims expire in five minutes. Confirmation is staff acknowledgement only.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated job"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Claim, state or version conflict"
+          }
+        }
+      }
+    },
+    "/printing/{id}/finish": {
+      "post": {
+        "summary": "Print job finish",
+        "description": "Body: leaseToken, status DIALOG_OPENED/FAILED.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated job"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Claim, state or version conflict"
+          }
+        }
+      }
+    },
+    "/printing/{id}/retry": {
+      "post": {
+        "summary": "Print job retry",
+        "description": "Body: version. Current actor and document permissions required. Claims expire in five minutes. Confirmation is staff acknowledgement only.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated job"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Claim, state or version conflict"
+          }
+        }
+      }
+    },
+    "/printing/{id}/confirm": {
+      "post": {
+        "summary": "Print job confirm",
+        "description": "Body: version. Current actor and document permissions required. Claims expire in five minutes. Confirmation is staff acknowledgement only.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated job"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Claim, state or version conflict"
           }
         }
       }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { QueuePrint } from '../billing/print-queue';
 import { api } from '../../lib/api';
 import { useAuth } from '../auth/store';
 import { Button } from '../../components/ui/button';
@@ -128,6 +129,7 @@ export function Kitchen() {
                 min {history ? 'to close' : 'elapsed'}
               </p>
             </header>
+            <QueuePrint orderId={ticket.orderId} kind="KITCHEN" />
             {ticket.lines.map((line, i) => (
               <div key={i} className="border-t pt-3">
                 <strong>

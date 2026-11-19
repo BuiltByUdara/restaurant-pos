@@ -1,4 +1,5 @@
 import express from 'express';
+import { printingRoutes } from './modules/printing/routes.js';
 import { reportingRoutes } from './modules/reporting/routes.js';
 import { inventoryRoutes } from './modules/inventory/routes.js';
 import { billingRoutes } from './modules/billing/routes.js';
@@ -52,7 +53,7 @@ export function createApp(config: Config, lifecycle = { stopping: false }) {
       data: {
         status: ready ? 'ok' : 'unavailable',
         database: ready ? 'connected' : 'unavailable',
-        phase: 8,
+        phase: 9,
       },
     });
   });
@@ -72,6 +73,7 @@ export function createApp(config: Config, lifecycle = { stopping: false }) {
     }),
   );
   app.use('/api/v1/auth', authRoutes(auth, config));
+  app.use('/api/v1/printing', printingRoutes(auth));
   app.use('/api/v1/staff', staffRoutes(auth));
   app.use('/api/v1/orders', orderRoutes(auth, events));
   app.use('/api/v1/kitchen', kitchenRoutes(auth, events));

@@ -536,11 +536,63 @@ paths['/health'] = {
     responses: { '200': response('Ready'), '503': response('Unavailable or draining') },
   },
 };
+
+for (const action of ['split', 'merge'])
+  paths['/orders/{id}/' + action] = {
+    post: {
+      summary: 'Manager-authorized order ' + action,
+      description:
+        'Requires orders:write and orders:approve. Unpaid OPEN/SERVED orders with no adjustments only. Split body: version, quantities. Merge body: version, sourceId, sourceVersion.',
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: {
+        '200': response('Committed result'),
+        '400': response('Invalid quantities or limits'),
+        '403': response('Permission denied'),
+        '409': response('Version or eligibility conflict'),
+      },
+    },
+  };
+paths['/printing'] = {
+  get: {
+    summary: 'Own durable print queue',
+    parameters: [{ name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } }],
+    responses: {
+      '200': response('Print snapshots without claim tokens'),
+      '403': response('Printing permission required'),
+    },
+  },
+  post: {
+    summary: 'Queue immutable receipt or kitchen document',
+    description:
+      'Body: orderId, kind RECEIPT/KITCHEN, width 58/80, requestKey UUID. Receipt requires payments:write; kitchen requires kitchen:read.',
+    responses: {
+      '201': response('Job identifier; duplicate key returns same job'),
+      '403': response('Permission denied'),
+      '409': response('Key reuse or missing ticket'),
+    },
+  },
+};
+for (const action of ['claim', 'finish', 'retry', 'confirm'])
+  paths['/printing/{id}/' + action] = {
+    post: {
+      summary: 'Print job ' + action,
+      description:
+        action === 'finish'
+          ? 'Body: leaseToken, status DIALOG_OPENED/FAILED.'
+          : 'Body: version. Current actor and document permissions required. Claims expire in five minutes. Confirmation is staff acknowledgement only.',
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: {
+        '200': response('Updated job'),
+        '403': response('Permission denied'),
+        '409': response('Claim, state or version conflict'),
+      },
+    },
+  };
 const document = {
   openapi: '3.1.0',
   info: {
-    title: 'Gather POS - Phase 8',
-    version: '0.8.0',
+    title: 'Gather POS - Phase 9',
+    version: '0.9.0',
     description:
       'Single restaurant. Money uses integer minor units. Configuration changes require a replica set and use transactions and optimistic versions.',
   },

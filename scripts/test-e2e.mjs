@@ -1,6 +1,9 @@
 import { spawnSync } from 'node:child_process';
 // Two fresh-server batches keep the real ten-login throttle enabled. No test bypass API.
-for (const args of [['--grep-invert', 'owner manages staff'], ['tests/e2e/reporting.spec.ts']]) {
+for (const args of [
+  ['--grep-invert', 'owner manages staff|phase 9'],
+  ['tests/e2e/reporting.spec.ts', 'tests/e2e/phase9.spec.ts'],
+]) {
   const result = spawnSync(
     process.execPath,
     ['node_modules/@playwright/test/cli.js', 'test', ...args],

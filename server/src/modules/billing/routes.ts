@@ -14,7 +14,10 @@ export function billingRoutes(auth: AuthService, events: EventEmitter) {
   router.use(requireAuth(auth), requirePermission('payments:write'));
   router.get('/print-jobs', async (req, res) => {
     res.json({
-      data: await PrintJob.find({ actorId: req.auth!.user.id }).sort({ createdAt: -1 }).limit(30),
+      data: await PrintJob.find({ actorId: req.auth!.user.id })
+        .select('-leaseToken')
+        .sort({ createdAt: -1 })
+        .limit(30),
     });
   });
   router.post('/print-jobs', async (req, res) => {
@@ -41,7 +44,7 @@ export function billingRoutes(auth: AuthService, events: EventEmitter) {
       .strict()
       .parse(req.body);
     const job = await PrintJob.findOneAndUpdate(
-      { _id: id, actorId: req.auth!.user.id },
+      { _id: id, actorId: req.auth!.user.id, requestKey: { $exists: false } },
       { $set: body },
       { new: true },
     );

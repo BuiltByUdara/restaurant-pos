@@ -6,9 +6,25 @@ import { requireAuth, requirePermission } from '../auth/middleware.js';
 import { createOrder, transitionOrder, transferOrder } from './service.js';
 import { AppError } from '../../lib/errors.js';
 import { OrderModel } from './model.js';
+import { splitOrder, mergeOrder } from './restructure.js';
 export function orderRoutes(auth: AuthService, events: EventEmitter) {
   const router = Router();
   router.use(requireAuth(auth));
+  for (const [action, operation] of [
+    ['split', splitOrder],
+    ['merge', mergeOrder],
+  ] as const) {
+    router.post(
+      `/:id/${action}`,
+      requirePermission('orders:write'),
+      requirePermission('orders:approve'),
+      async (req, res) => {
+        const data = await operation(String(req.params.id), req.body, req.auth!.user.id);
+        events.emit('orders:changed');
+        res.json({ data });
+      },
+    );
+  }
   router.use((req, res, next) => {
     res.on('finish', () => {
       if (req.method !== 'GET' && res.statusCode < 300) events.emit('orders:changed');

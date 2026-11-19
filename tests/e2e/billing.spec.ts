@@ -40,7 +40,13 @@ test('cashier opens shift, settles an order, views receipt and reconciles cash',
   await page.evaluate(() => {
     window.print = () => {};
   });
-  await page.getByRole('button', { name: 'Print receipt', exact: true }).click();
+  await page.getByRole('button', { name: 'Queue receipt', exact: true }).click();
+  await expect(page.getByText('Print job queued.', { exact: false })).toBeVisible();
+  await page.getByRole('link', { name: 'Print queue', exact: true }).click();
+  await page.getByRole('button', { name: 'Open print dialog', exact: true }).click();
+  await expect(page.locator('#queued-document')).toContainText('CUSTOMER RECEIPT');
+  await page.getByRole('button', { name: 'Confirm paper output', exact: true }).click();
+  await page.getByRole('link', { name: 'Cashier', exact: true }).click();
   await page.getByLabel('Counted cash').fill('1550');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Close shift', exact: true }).click();

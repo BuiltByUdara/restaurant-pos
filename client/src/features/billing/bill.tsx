@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
-import { browserReceiptPrinter } from './printer';
+import { QueuePrint } from './print-queue';
 import { useAuth } from '../auth/store';
 import { money, parsePrice } from '../configuration/api';
 import { Button } from '../../components/ui/button';
@@ -127,35 +127,7 @@ export function BillPanel({ id }: { id: string }) {
           <option value="58">58 mm</option>
         </select>
       </label>
-      <Button
-        onClick={() =>
-          void (async () => {
-            setError('');
-            let jobId = '';
-            try {
-              const job = await api<{ _id: string }>('/billing/print-jobs', {
-                method: 'POST',
-                body: JSON.stringify({ orderId: id, width: Number(width) }),
-              });
-              jobId = job._id;
-              await browserReceiptPrinter.print();
-              await api(`/billing/print-jobs/${jobId}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ status: 'DIALOG_OPENED' }),
-              });
-            } catch (e) {
-              setError('Printing failed. Use Print receipt to retry.');
-              if (jobId)
-                await api(`/billing/print-jobs/${jobId}`, {
-                  method: 'PATCH',
-                  body: JSON.stringify({ status: 'FAILED' }),
-                }).catch(() => {});
-            }
-          })()
-        }
-      >
-        Print receipt
-      </Button>
+      <QueuePrint key={id} orderId={id} kind="RECEIPT" width={Number(width) as 58 | 80} />
       <style>{`@media print { body * { visibility:hidden; } #receipt, #receipt * { visibility:visible; } #receipt { position:absolute; left:0; top:0; width:${width}mm; color:black; background:white; font-size:12px; } }`}</style>
       {permissions.includes('orders:approve') &&
         data.order.status === 'SERVED' &&
